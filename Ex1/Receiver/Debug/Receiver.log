@@ -1,0 +1,3 @@
+﻿  main.c
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(105,38): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+  Receiver.vcxproj -> C:\Users\Benzu\source\repos\Ex1\Debug\Receiver.exe

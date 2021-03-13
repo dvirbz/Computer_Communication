@@ -18,6 +18,8 @@
 typedef enum { M, C, RE } alloctype; // memory allocation type.
 typedef enum { TRNS_FAILED, TRNS_DISCONNECTED, TRNS_SUCCEEDED } transfer_result;
 typedef enum { SUCCEEDED, CONTINUE, TIMEO, FAILED } whatevent; // check event
-typedef enum { IP = 1, PORT, FILENAME } arguments; 
+typedef enum { IP_SNDR = 1, PORT_SNDR, FILENAME_SNDR } arguments_SNDR; 
+typedef enum { PORT_RCVR = 1, FILENAME_RCVR } arguments_SNDR;
+
 
 #endif // STRUCTS	ANDENUMS_H
