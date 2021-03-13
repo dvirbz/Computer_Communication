@@ -13,7 +13,7 @@ int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_SNDR);
 	char buffer[BUFFER_SIZE_RCVR] = { 0 }, ip[MAX_IP_LEN] = { 0 }, filename[_MAX_PATH] = { 0 }, sndbuf[3] = { 0 };
-	int port = 0, temp;
+	int port = 0;
 	FILE* message = { 0 };
 	WSADATA startup;
 	SOCKADDR_IN address;
@@ -34,9 +34,9 @@ int main(int argc, string* argv)
 	{
 		for (int i = 0; i < 8; i++)
 		{
-			fprintf(stderr, "%d, %d, %s\n", 1, *buffer, buffer);
+			fprintf(stderr, "1 %d, %d, %s\n", *(buffer + 2 * i), *(buffer + 2 * i + 1), buffer);
 			strncpy_s(sndbuf, sizeof(sndbuf), buffer + 2 * i, sizeof(sndbuf) - 1);
-			fprintf(stderr, "%d, %d, %s\n", 2, *sndbuf, sndbuf);
+			fprintf(stderr, "2 %d, %d, %s\n", *sndbuf, *(sndbuf + 1), sndbuf);
 			hamming(sndbuf);
 			sendto(s, sndbuf, sizeof(sndbuf) - 1, 0, (SOCKADDR*)&address, sizeof(address));
 		}
@@ -48,53 +48,60 @@ int main(int argc, string* argv)
 
 void hamming(string str)
 {
-
+	//gj
 }
 void logicshiftrightby11(string str)
-{
-	/*int temp;
-	for (int i = 0; i < strlen(str) - 1; i++)
+{	
+	int64_t word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;	
+	for (int i = 0; i < 6; i++)
 	{
-		str[i] = str[i + 1];
-	}
-	for (int i = 1; i < strlen(str); i++)
-	{
-		temp = str[i] & 0x7;
-		temp = temp << 5;
-		str[i - 1] = str[i - 1] >> 3;
-		str[i - 1] |= temp;
-	}*/
-	unsigned long int word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;
-	for (int i = 0; i < 1; i++)
-	{
-		word1 += str[i] << (8 * i);
+		word1 += (int64_t)str[i] << (8 * i);
 		printf("%d\n", str[i]);
-		word2 += str[i + 5] << (8 * i);
+		word2 += (int64_t)str[i + 5] << (8 * i);
 		str[i] = '\0';
 	}
 	word2 = word2 << 16;
-	word2 = word2 >> 20;
-	for (int i = 0; i < 64; i++)
+	word2 = word2 >> 20;	
+	for (int i = 63; i >= 0; i--)
 	{
-		printf("%d", ((word2 << i) >> 63 ));
-		if ((i + 1) % 4 == 0)
+		printf("%d", (word2 >> i) & 0x1 );
+		if (i % 4 == 0)
 			printf(" ");
 	}
 	printf("\n");
 
-	for (int i = 0; i < 64; i++)
+	for (int i = 63; i >= 0; i--)
 	{
-		printf("%d", ((word1 << i) >> 63));
-		if ((i + 1) % 4 == 0)
+		printf("%d", (word1 >> i) & 0x1);
+		if (i % 4 == 0)
 			printf(" ");
 	}
-	printf("\n");
-	Sleep(15000);
+	printf("\n");	
 	for (int i = 0; i < 4; i++)
 	{
-		str[2 * i] = word1 & mask1;
-		str[2 * i + 1] = (word1 & (mask2 << (i * 11))) >> (11 * i + 8);
-		str[2 * i + 8] = word2 & mask1;
-		str[2 * i + 9] = (word2 & (mask2 << (i * 11))) >> (11 * i + 8);
+		str[2 * i] = (word1 >> (11 * i))& mask1;
+		str[2 * i + 1] = (word1 >> (11 * i + 8))& mask2;
+		str[2 * i + 8] = (word2 >> (11 * i))& mask1;
+		str[2 * i + 9] = (word2 >> (11 * i + 8))& mask2;
 	}
+	printf("str: ");
+	for (int i = 0; i < 16; i++)
+	{
+		if(str[i] == 0)
+			printf("0'");
+		else
+			printf("%c", str[i]);
+	}
+	printf("\n");
+	printf("str: ");
+	for (int i = 0; i < 16; i++)
+	{
+		if (str[i] == 0)
+			printf("0");
+		else
+			printf("%d ", str[i]);
+	}
+	printf("\n");
+	
+	
 }

@@ -6,6 +6,7 @@
 #include "WSA.h"
 #include <conio.h>
 #include <math.h>
+#include <inttypes.h>
 
 void logicshiftleftby11(string str);
 int nonblockingrecv();
@@ -17,7 +18,7 @@ int main(int argc, string* argv)
 	char buffer[BUFFER_SIZE_RCVR] = "\0", filename[_MAX_PATH] = { 0 }, rcvbuf[3] = { 0 }, endbuf[5] = "\0";
 	int port = 0, maxfd, n;
 	TIMEVAL waittime = { 0 };
-	unsigned int keystrokes = 0, ssl_i = 0;
+	unsigned int keystrokes = 0, sll_i = 0;
 	fd_set fds;
 	FILE* message = { 0 };
 	WSADATA startup;
@@ -63,7 +64,7 @@ int main(int argc, string* argv)
 				if (c > 31 && c < 127)
 				putc(c, stderr);
 				if (keystrokes < strlen(END) + 1)
-					endbuf[keystrokes] = c;
+					endbuf[keystrokes] = c;				
 			}
 			keystrokes++;
 		}
@@ -75,58 +76,123 @@ int main(int argc, string* argv)
 				{
 					printf("RECV ERROR %d\n", WSAGetLastError());
 				}
-				buffer[ssl_i] = rcvbuf[0];
-				buffer[ssl_i + 1] = rcvbuf[1];
-				ssl_i += 2;
-				if (ssl_i > BUFFER_SIZE_RCVR - 2)
+				buffer[sll_i] = rcvbuf[0];
+				buffer[sll_i + 1] = rcvbuf[1];
+				sll_i += 2;
+				if (sll_i > BUFFER_SIZE_RCVR - 2)
 				{
-					ssl_i = 0;
+					sll_i = 0;
+					printf("1. buffer is: %s\n", buffer);
 					logicshiftleftby11(buffer);
-					fputs(buffer, stderr);
+					//fputs(buffer, stderr);
 				}
 			}
 			n--;
 		}
 	}
-
+	fclose(message);
 	return SUCCESSCODE;
 }
 
+//void logicshiftleftby11(string str)
+//{
+//	int temp, mask, goodbits = 11, badbits = 5;
+//	int twobytes[8] = { 0 };
+//	for (int i = 0; i < 16; i += 2)
+//	{
+//		twobytes[i / 2] = str[i] + (str[i + 1] << 8);
+//	}
+//	for (int i = 0; i < 4; i++)
+//	{
+//		mask = pow(2, min(badbits, 11)) - 1;
+//		temp = twobytes[i + 1] & mask;
+//		temp = temp << goodbits;
+//		twobytes[i] |= temp;
+//		twobytes[i + 1] = twobytes[i + 1] >> min(badbits, 11);
+//		if (badbits > 11)
+//		{
+//			for (int j = i + 1; j < 7; j++)
+//			{
+//				twobytes[j] = twobytes[j + 1];
+//			}
+//			badbits -= 11;
+//			goodbits += 11;
+//			i--;
+//		}
+//		goodbits -= 5;
+//		badbits += 5;
+//	}
+//	for (int i = 0; i < 8; i ++)
+//	{
+//		mask = 0xFF;
+//		str[2 * i] = twobytes[i] & mask;
+//		mask = 0xFF00;
+//		str[2 * i + 1] = (twobytes[i] & mask) >> 8;
+//	}
+//	str[BUFFER_SIZE_SNDR - 1] = '\0';
+//	printf("2. buffer is: %s\n", str);
+//}
 void logicshiftleftby11(string str)
 {
-	int temp, mask, goodbits = 11, badbits = 5;
-	int twobytes[8] = { 0 };
-	for (int i = 0; i < 16; i += 2)
+	int64_t word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;
+	int shift = 0;
+	for (int i = 0; i < 8; i++)
 	{
-		twobytes[i / 2] = str[i] + (str[i + 1] << 8);
-	}
-	for (int i = 0; i < 4; i++)
-	{
-		mask = pow(2, min(badbits, 11)) - 1;
-		temp = twobytes[i + 1] & mask;
-		temp = temp << goodbits;
-		twobytes[i] |= temp;
-		twobytes[i + 1] = twobytes[i + 1] >> min(badbits, 11);
-		if (badbits > 11)
+		word1 += ((int64_t)str[i] + 256) % 256 << shift;
+		//printf("%d\n", str[i]);
+		word2 += ((int64_t)str[i + 8] + 256) % 256 << shift;
+		for (int j = 63; j >= 0; j--)
 		{
-			for (int j = i + 1; j < 7; j++)
-			{
-				twobytes[j] = twobytes[j + 1];
-			}
-			badbits -= 11;
-			goodbits += 11;
-			i--;
+			printf("%d", (word2 >> j) & 0x1);
+			if (j % 4 == 0)
+				printf(" ");
 		}
-		goodbits -= 5;
-		badbits += 5;
+		printf("%d\n", str[i + 8]);
+		str[i] = '\0';
+		shift += ((i % 2) ? 3 : 8);
 	}
-	for (int i = 0; i < 8; i ++)
+	word1 += (word2 & 0xF) << 44;
+	word2 >>= 4;
+	for (int i = 63; i >= 0; i--)
 	{
-		mask = 0xFF;
-		str[2 * i] = twobytes[i] & mask;
-		mask = 0xFF00;
-		str[2 * i + 1] = (twobytes[i] & mask) >> 8;
+		printf("%d", (word2 >> i) & 0x1);
+		if (i % 4 == 0)
+			printf(" ");
 	}
-	str[BUFFER_SIZE_SNDR - 1] = '\0';
-	printf("buffer is: %s\n", str);
+	printf("\n");
+
+	for (int i = 63; i >= 0; i--)
+	{
+		printf("%d", (word1 >> i) & 0x1);
+		if (i % 4 == 0)
+			printf(" ");
+	}
+	printf("\n");
+	for (int i = 0; i < 6; i++)
+	{
+		str[i] = (word1 >> (i * 8)) & 0xFF;
+	}
+	for (int i = 0; i < 5; i++)
+	{
+		str[i + 6] = (word2 >> (i * 8)) & 0xFF;
+	}
+	printf("2. str: ");
+	for (int i = 0; i < 16; i++)
+	{
+		if (str[i] == 0)
+			printf("0'");
+		else
+			printf("%c", str[i]);
+	}
+	printf("\n");
+	printf("str: ");
+	for (int i = 0; i < 16; i++)
+	{
+		if (str[i] == 0)
+			printf("0 ");
+		else
+			printf("%d ", str[i]);
+	}
+	printf("\n");
+
 }
