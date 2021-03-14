@@ -55,53 +55,16 @@ void logicshiftrightby11(string str)
 	int64_t word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;	
 	for (int i = 0; i < 6; i++)
 	{
-		word1 += (int64_t)str[i] << (8 * i);
-		printf("%d\n", str[i]);
-		word2 += (int64_t)str[i + 5] << (8 * i);
-		str[i] = '\0';
-	}
+		word1 += (int64_t)str[i] << (8 * i);		
+		word2 += (int64_t)str[i + 5] << (8 * i);		
+	}	
 	word2 = word2 << 16;
-	word2 = word2 >> 20;	
-	for (int i = 63; i >= 0; i--)
-	{
-		printf("%d", (word2 >> i) & 0x1 );
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
-
-	for (int i = 63; i >= 0; i--)
-	{
-		printf("%d", (word1 >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");	
+	word2 = word2 >> 20;
 	for (int i = 0; i < 4; i++)
 	{
-		str[2 * i] = (word1 >> (11 * i))& mask1;
-		str[2 * i + 1] = (word1 >> (11 * i + 8))& mask2;
-		str[2 * i + 8] = (word2 >> (11 * i))& mask1;
-		str[2 * i + 9] = (word2 >> (11 * i + 8))& mask2;
-	}
-	printf("str: ");
-	for (int i = 0; i < 16; i++)
-	{
-		if(str[i] == 0)
-			printf("0'");
-		else
-			printf("%c", str[i]);
-	}
-	printf("\n");
-	printf("str: ");
-	for (int i = 0; i < 16; i++)
-	{
-		if (str[i] == 0)
-			printf("0");
-		else
-			printf("%d ", str[i]);
-	}
-	printf("\n");
-	
-	
+		str[2 * i] = (char)((word1 >> (11 * i))& mask1);
+		str[2 * i + 1] = (char)((word1 >> (11 * i + 8))& mask2);
+		str[2 * i + 8] = (char)((word2 >> (11 * i))& mask1);
+		str[2 * i + 9] = (char)((word2 >> (11 * i + 8))& mask2);
+	}		
 }

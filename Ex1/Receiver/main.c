@@ -81,10 +81,9 @@ int main(int argc, string* argv)
 				sll_i += 2;
 				if (sll_i > BUFFER_SIZE_RCVR - 2)
 				{
-					sll_i = 0;
-					printf("1. buffer is: %s\n", buffer);
+					sll_i = 0;					
 					logicshiftleftby11(buffer);
-					//fputs(buffer, stderr);
+					printf("1. buffer is: %s\n", buffer);					
 				}
 			}
 			n--;
@@ -94,44 +93,7 @@ int main(int argc, string* argv)
 	return SUCCESSCODE;
 }
 
-//void logicshiftleftby11(string str)
-//{
-//	int temp, mask, goodbits = 11, badbits = 5;
-//	int twobytes[8] = { 0 };
-//	for (int i = 0; i < 16; i += 2)
-//	{
-//		twobytes[i / 2] = str[i] + (str[i + 1] << 8);
-//	}
-//	for (int i = 0; i < 4; i++)
-//	{
-//		mask = pow(2, min(badbits, 11)) - 1;
-//		temp = twobytes[i + 1] & mask;
-//		temp = temp << goodbits;
-//		twobytes[i] |= temp;
-//		twobytes[i + 1] = twobytes[i + 1] >> min(badbits, 11);
-//		if (badbits > 11)
-//		{
-//			for (int j = i + 1; j < 7; j++)
-//			{
-//				twobytes[j] = twobytes[j + 1];
-//			}
-//			badbits -= 11;
-//			goodbits += 11;
-//			i--;
-//		}
-//		goodbits -= 5;
-//		badbits += 5;
-//	}
-//	for (int i = 0; i < 8; i ++)
-//	{
-//		mask = 0xFF;
-//		str[2 * i] = twobytes[i] & mask;
-//		mask = 0xFF00;
-//		str[2 * i + 1] = (twobytes[i] & mask) >> 8;
-//	}
-//	str[BUFFER_SIZE_SNDR - 1] = '\0';
-//	printf("2. buffer is: %s\n", str);
-//}
+
 void logicshiftleftby11(string str)
 {
 	int64_t word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;
@@ -139,60 +101,15 @@ void logicshiftleftby11(string str)
 	for (int i = 0; i < 8; i++)
 	{
 		word1 += ((int64_t)str[i] + 256) % 256 << shift;
-		//printf("%d\n", str[i]);
-		word2 += ((int64_t)str[i + 8] + 256) % 256 << shift;
-		for (int j = 63; j >= 0; j--)
-		{
-			printf("%d", (word2 >> j) & 0x1);
-			if (j % 4 == 0)
-				printf(" ");
-		}
-		printf("%d\n", str[i + 8]);
-		str[i] = '\0';
+		word2 += ((int64_t)str[i + 8] + 256) % 256 << shift;		
 		shift += ((i % 2) ? 3 : 8);
 	}
 	word1 += (word2 & 0xF) << 44;
-	word2 >>= 4;
-	for (int i = 63; i >= 0; i--)
-	{
-		printf("%d", (word2 >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
-
-	for (int i = 63; i >= 0; i--)
-	{
-		printf("%d", (word1 >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
+	word2 >>= 4;	
 	for (int i = 0; i < 6; i++)
 	{
 		str[i] = (word1 >> (i * 8)) & 0xFF;
-	}
-	for (int i = 0; i < 5; i++)
-	{
 		str[i + 6] = (word2 >> (i * 8)) & 0xFF;
 	}
-	printf("2. str: ");
-	for (int i = 0; i < 16; i++)
-	{
-		if (str[i] == 0)
-			printf("0'");
-		else
-			printf("%c", str[i]);
-	}
-	printf("\n");
-	printf("str: ");
-	for (int i = 0; i < 16; i++)
-	{
-		if (str[i] == 0)
-			printf("0 ");
-		else
-			printf("%d ", str[i]);
-	}
-	printf("\n");
-
+	str[11] = '\0';
 }
