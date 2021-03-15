@@ -10,7 +10,8 @@
 
 void logicshiftleftby11(string str);
 int nonblockingrecv();
-void unhamming(string str);
+void unHamming(string str);
+BOOL ispowof2(int num);
 
 int main(int argc, string* argv)
 {
@@ -43,7 +44,7 @@ int main(int argc, string* argv)
 		FD_ZERO(&fds);
 		FD_SET(s, &fds);
 
-		n = select(maxfd + 1, &fds, NULL, NULL, &waittime);
+		select(maxfd + 1, &fds, NULL, NULL, &waittime);
 
 		if (_kbhit())
 		{
@@ -68,25 +69,25 @@ int main(int argc, string* argv)
 			}
 			keystrokes++;
 		}
-		while (n > 0)
+		if (FD_ISSET(s, &fds))
 		{
-			if (FD_ISSET(s, &fds))
+			if (recvfrom(s, rcvbuf, sizeof(rcvbuf), 0, (SOCKADDR*)&address, &senderaddrsize) == SOCKET_ERROR)
 			{
-				if (recvfrom(s, rcvbuf, sizeof(rcvbuf), 0, (SOCKADDR*)&address, &senderaddrsize) == SOCKET_ERROR)
-				{
-					printf("RECV ERROR %d\n", WSAGetLastError());
-				}
-				buffer[sll_i] = rcvbuf[0];
-				buffer[sll_i + 1] = rcvbuf[1];
-				sll_i += 2;
-				if (sll_i > BUFFER_SIZE_RCVR - 2)
-				{
-					sll_i = 0;					
-					logicshiftleftby11(buffer);
-					printf("1. buffer is: %s\n", buffer);					
-				}
+				printf("RECV ERROR %d\n", WSAGetLastError());
 			}
-			n--;
+			printf("%s\n", rcvbuf);
+			unHamming(rcvbuf);
+			fputs(rcvbuf, stderr);
+			buffer[sll_i] = rcvbuf[0];
+			buffer[sll_i + 1] = rcvbuf[1];
+			sll_i += 2;
+			if (sll_i > BUFFER_SIZE_RCVR - 2)
+			{
+				sll_i = 0;
+				logicshiftleftby11(buffer);
+				printf("buffer right before writing is: %s\n", buffer);
+				fputs(buffer, message);
+			}
 		}
 	}
 	fclose(message);
@@ -113,3 +114,77 @@ void logicshiftleftby11(string str)
 	}
 	str[11] = '\0';
 }
+
+BOOL ispowof2(int num)
+{
+	int i = 1;
+	while (i <= num)
+	{
+		if (i == num)
+			return TRUE;
+		i *= 2;
+	}
+	return FALSE;
+}
+
+void unHamming(string str)
+{
+	int unhamming = 0, databits[16] = { 0 }, checkbits[5] = { 0 }, j = 0;
+	unhamming = (unsigned int)str[0] + ((unsigned int)str[1] << BYTESIZE);
+	printf("%d\n", unhamming);
+	for (int i = 15; i > 0; i--)
+	{
+		printf("%d", (unhamming >> i) & 0x1);
+		if (i % 4 == 0)
+			printf(" ");
+	}
+	printf("\n");
+	for (int i = 0; i < 16; i++)
+	{
+		databits[i] = ((unhamming >> i) & 0x1);
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		checkbits[i + 1] = unhamming & (int)pow(2, pow(2, i));
+	}
+
+	// check errors
+	str[0] = 0;
+	str[1] = 0;
+	printf("databits is: ");
+	for (int i = 15; i >= 0; i--)
+	{
+		printf("%d", databits[i]);
+		if (i % 4 == 0)
+			printf(" ");
+	}
+	printf("\n");
+	for (int i = 1; i < 16; i++)
+	{
+		if (!ispowof2(i))
+		{
+			if (i == 13)
+				j = 0;
+			if (i < 13)
+				str[0] += (databits[i] << j);
+			else
+				str[1] += (databits[i] << j);
+			j++;
+		}
+	}
+	printf("%c\n", str[0]);
+	for (int i = 7; i >= 0; i--)
+	{
+		printf("%d", (str[0] >> i) & 0x1);
+		if (i % 4 == 0)
+			printf(" ");
+	}
+	printf("\n");
+	for (int i = 7; i >= 0; i--)
+	{
+		printf("%d", (str[1] >> i) & 0x1);
+		if (i % 4 == 0)
+			printf(" ");
+	}
+	printf("\n");
+  }
