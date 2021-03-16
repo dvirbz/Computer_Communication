@@ -12,8 +12,8 @@ void hamming(string str);
 int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_SNDR);
-	char buffer[BUFFER_SIZE_RCVR] = { 0 }, ip[MAX_IP_LEN] = { 0 }, filename[_MAX_PATH] = { 0 }, sndbuf[3] = { 0 };
-	int port = 0;
+	char buffer[BUFFER_SIZE_RCVR] = { 0 }, ip[MAX_IP_LEN] = { 0 }, filename[_MAX_PATH] = { 0 }, sndbuf[3] = { 0 }, sndstr[321] = { 0 };
+	int port = 0, blocki = 0;
 	FILE* message = { 0 };
 	WSADATA startup;
 	SOCKADDR_IN address;
@@ -29,20 +29,31 @@ int main(int argc, string* argv)
 	if (s == INVALID_SOCKET)
 		exit(ERRORCODE);
 	fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
-	logicshiftrightby11(buffer);
 	while (!feof(message))
 	{
+		logicshiftrightby11(buffer);
 		for (int i = 0; i < 8; i++)
 		{
-			fprintf(stderr, "1 %d, %d, %s\n", *(buffer + 2 * i), *(buffer + 2 * i + 1), buffer);
 			strncpy_s(sndbuf, sizeof(sndbuf), buffer + 2 * i, sizeof(sndbuf) - 1);
-			fprintf(stderr, "2 %d, %d, %s\n", *sndbuf, *(sndbuf + 1), sndbuf);
+			//printf("1. sndbuf is: %s, %d\n", sndbuf, strlen(sndbuf));
 			hamming(sndbuf);
-			sendto(s, sndbuf, sizeof(sndbuf) - 1, 0, (SOCKADDR*)&address, sizeof(address));
+			//printf("2. sndbuf is: %s, %d\n", sndbuf, strlen(sndbuf));
+			//snprintf(sndstr, sizeof(sndbuf) + sizeof(sndstr), "%s%s", sndstr, sndbuf);
+			//printf("sndstr is: %s, %d, %s, %d\n", sndstr, strlen(sndstr), sndbuf, strlen(sndbuf));
+			//blocki++;
+			//blocki = 0;
+			blocki += sendto(s, sndbuf, sizeof(sndbuf) - 1, 0, (SOCKADDR*)&address, sizeof(address));
+			sndstr[0] = '\0';
 		}
 		fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
-		logicshiftrightby11(buffer);
 	}
+	printf("blocki: %d\n", blocki);
+	//if (blocki != 0)
+	//{
+	//	sndstr[2 * blocki + 1] = '\0';
+	//	//printf("%d", strlen(sndstr));
+	//	sendto(s, sndstr, sizeof(sndstr) - 1, 0, (SOCKADDR*)&address, sizeof(address));
+	//}
 	fclose(message);
 	return SUCCESSCODE;
 }
@@ -53,11 +64,7 @@ void hamming(string str)
 	hamming = hamming + (((unsigned int)str[0] & 0x1) << 3)
 		+ (((unsigned int)str[0] & 0xE) << 4)
 		+ (((unsigned int)str[0] & 0xF0) << 5) 
-		+ (((unsigned int)str[1] & 0x7) << 12);
-	printf("%d\n", ((int)str[0] & 0x1) << 3);
-	printf("%d\n", str[0]);
-	printf("%d\n", str[1]);
-	printf("%d\n", hamming);
+		+ (((unsigned int)str[1] & 0x7) << 13);
 	for (int i = 0; i < 16; i++)
 	{
 		databits[i] = (hamming >> i) & 0x1;
@@ -67,30 +74,17 @@ void hamming(string str)
 	checkbits[3] = databits[5] ^ databits[6] ^ databits[7] ^ databits[12] ^ databits[13] ^ databits[14] ^ databits[15];
 	checkbits[4] = databits[9] ^ databits[10] ^ databits[11] ^ databits[12] ^ databits[13] ^ databits[14] ^ databits[15];
 	hamming += (checkbits[1] << 1) + (checkbits[2] << 2) + (checkbits[3] << 4) + (checkbits[4] << 8);
-	for (int i = 7; i >= 0; i--)
-	{
-		printf("%d", (str[0] >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
-	for (int i = 15; i > 0; i--)
-	{
-		printf("%d", (hamming >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
 	str[0] = hamming & 0xFF;
 	str[1] = (hamming >> BYTESIZE) & 0xFF;
+	str[2] = '\0';
 }
 void logicshiftrightby11(string str)
 {	
-	int64_t word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;	
+	unsigned long long word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;	
 	for (int i = 0; i < 6; i++)
 	{
-		word1 += (int64_t)str[i] << (BYTESIZE * i);
-		word2 += (int64_t)str[i + DATASIZE / 2] << (BYTESIZE * i);
+		word1 += (unsigned long long)str[i] << (BYTESIZE * i);
+		word2 += (unsigned long long)str[i + DATASIZE / 2] << (BYTESIZE * i);
 	}	
 	word2 = word2 << 16;
 	word2 = word2 >> 20;

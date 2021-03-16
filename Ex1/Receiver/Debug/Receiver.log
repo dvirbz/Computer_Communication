@@ -1,3 +1,0 @@
-﻿  main.c
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(20,23): warning C4101: 'n': unreferenced local variable
-  Receiver.vcxproj -> C:\Users\Benzu\source\repos\Ex1\Debug\Receiver.exe

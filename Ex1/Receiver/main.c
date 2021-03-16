@@ -16,10 +16,10 @@ BOOL ispowof2(int num);
 int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_RCVR);
-	char buffer[BUFFER_SIZE_RCVR] = "\0", filename[_MAX_PATH] = { 0 }, rcvbuf[3] = { 0 }, endbuf[5] = "\0";
+	char buffer[BUFFER_SIZE_RCVR] = "\0", filename[_MAX_PATH] = { 0 }, rcvbuf[3] = { 0 }, endbuf[5] = "\0", rcvstr[321] = { 0 };
 	int port = 0, maxfd, n;
 	TIMEVAL waittime = { 0 };
-	unsigned int keystrokes = 0, sll_i = 0;
+	unsigned int keystrokes = 0, sll_i = 0, blocki = 0;
 	fd_set fds;
 	FILE* message = { 0 };
 	WSADATA startup;
@@ -71,13 +71,16 @@ int main(int argc, string* argv)
 		}
 		if (FD_ISSET(s, &fds))
 		{
-			if (recvfrom(s, rcvbuf, sizeof(rcvbuf), 0, (SOCKADDR*)&address, &senderaddrsize) == SOCKET_ERROR)
+			blocki += recvfrom(s, rcvbuf, sizeof(rcvbuf) - 1, 0, (SOCKADDR*)&address, &senderaddrsize);
+			//printf("blocki: %d, rcvstr: %s\n", blocki, rcvstr);
+			if (blocki == SOCKET_ERROR)
 			{
 				printf("RECV ERROR %d\n", WSAGetLastError());
 			}
-			printf("%s\n", rcvbuf);
+			//strncpy_s(rcvbuf, sizeof(rcvbuf), rcvstr + i, sizeof(rcvbuf) - 1);
+			//printf("rcvbuf before hamming: %s\n", rcvbuf);
 			unHamming(rcvbuf);
-			fputs(rcvbuf, stderr);
+			//printf("rcvbuf after hamming: %s\n", rcvbuf);
 			buffer[sll_i] = rcvbuf[0];
 			buffer[sll_i + 1] = rcvbuf[1];
 			sll_i += 2;
@@ -85,11 +88,13 @@ int main(int argc, string* argv)
 			{
 				sll_i = 0;
 				logicshiftleftby11(buffer);
-				printf("buffer right before writing is: %s\n", buffer);
+				//printf("buffer right before writing is: %s\n", buffer);
 				fputs(buffer, message);
 			}
+			printf("%.2f%%\n", blocki / 298.888);
 		}
 	}
+	printf("Done!\n");
 	fclose(message);
 	return SUCCESSCODE;
 }
@@ -97,12 +102,12 @@ int main(int argc, string* argv)
 
 void logicshiftleftby11(string str)
 {
-	int64_t word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;
-	int shift = 0;
+	unsigned long long word1 = 0, word2 = 0, mask1 = 0xFF, mask2 = 0x7;
+	unsigned int shift = 0;
 	for (int i = 0; i < 8; i++)
 	{
-		word1 += ((int64_t)str[i] + 256) % 256 << shift;
-		word2 += ((int64_t)str[i + 8] + 256) % 256 << shift;		
+		word1 += ((unsigned long long)str[i] + 256) % 256 << shift;
+		word2 += ((unsigned long long)str[i + 8] + 256) % 256 << shift;
 		shift += ((i % 2) ? 3 : 8);
 	}
 	word1 += (word2 & 0xF) << 44;
@@ -129,16 +134,9 @@ BOOL ispowof2(int num)
 
 void unHamming(string str)
 {
-	int unhamming = 0, databits[16] = { 0 }, checkbits[5] = { 0 }, j = 0;
-	unhamming = (unsigned int)str[0] + ((unsigned int)str[1] << BYTESIZE);
-	printf("%d\n", unhamming);
-	for (int i = 15; i > 0; i--)
-	{
-		printf("%d", (unhamming >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
+	unsigned int unhamming = 0, databits[16] = { 0 }, checkbits[5] = { 0 }, j = 0;
+	unhamming = (unsigned int)str[0] & 0xFF;
+	unhamming += (((unsigned int)str[1]) << BYTESIZE) & 0xFF00;
 	for (int i = 0; i < 16; i++)
 	{
 		databits[i] = ((unhamming >> i) & 0x1);
@@ -149,16 +147,10 @@ void unHamming(string str)
 	}
 
 	// check errors
+
 	str[0] = 0;
 	str[1] = 0;
-	printf("databits is: ");
-	for (int i = 15; i >= 0; i--)
-	{
-		printf("%d", databits[i]);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
+	str[2] = 0;
 	for (int i = 1; i < 16; i++)
 	{
 		if (!ispowof2(i))
@@ -172,19 +164,12 @@ void unHamming(string str)
 			j++;
 		}
 	}
-	printf("%c\n", str[0]);
-	for (int i = 7; i >= 0; i--)
-	{
-		printf("%d", (str[0] >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
-	for (int i = 7; i >= 0; i--)
-	{
-		printf("%d", (str[1] >> i) & 0x1);
-		if (i % 4 == 0)
-			printf(" ");
-	}
-	printf("\n");
   }
+
+//for (int i = 15; i > 0; i--)
+//{
+//	printf("%d", (unhamming >> i) & 0x1);
+//	if (i % 4 == 0)
+//		printf(" ");
+//}
+//printf("\n");
