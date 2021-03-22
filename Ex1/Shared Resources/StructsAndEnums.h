@@ -10,6 +10,8 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
+// Structs //
+typedef char* string;
 	
 	
 
@@ -22,4 +24,4 @@ typedef enum { IP_SNDR = 1, PORT_SNDR, FILENAME_SNDR } arguments_SNDR;
 typedef enum { PORT_RCVR = 1, FILENAME_RCVR } arguments_SNDR;
 
 
-#endif // STRUCTS	ANDENUMS_H
+#endif // STRUCTSANDENUMS_H

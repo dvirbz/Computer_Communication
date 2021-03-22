@@ -29,7 +29,12 @@ typedef char* string;
 #define STDIN 0
 #define END "End"
 #define BUFFER_SIZE_RCVR 17
-
+#define BYTESIZE 8
+#define DATASIZE (BUFFER_SIZE_SNDR - 1)
+#define HAMMINGSIZE 15
+#define PACKETSIZE 1501
+#define MALLOCFAIL "Failed To Allocate Memory.\n"
+#define INVALIDALLOC "Invalid Allocation type.\n"
 
 
 #endif	// DEFINES_H

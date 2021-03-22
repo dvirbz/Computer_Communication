@@ -11,33 +11,34 @@
 void logicshiftleftby11(string str);
 int nonblockingrecv();
 void unHamming(string str);
+void Get__Data(string p, string data, int* currentbyte);
 BOOL ispowof2(int num);
 
 int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_RCVR);
-	char buffer[BUFFER_SIZE_RCVR] = "\0", filename[_MAX_PATH] = { 0 }, rcvbuf[3] = { 0 }, endbuf[5] = "\0", rcvstr[321] = { 0 };
-	int port = 0, maxfd, n;
+	char buffer[BUFFER_SIZE_RCVR] = "\0", filename[_MAX_PATH] = { 0 }, endbuf[5] = "\0", packet[PACKETSIZE] = { 0 };
+	int port = 0, maxfd, n, temp = -1, currentbyte = 0;
 	TIMEVAL waittime = { 0 };
 	unsigned int keystrokes = 0, sll_i = 0, blocki = 0;
 	fd_set fds;
 	FILE* message = { 0 };
 	WSADATA startup;
-	SOCKADDR_IN address;
+	SOCKADDR_IN address_rcvr, address_sndr;
 	SOCKET s;
-	int senderaddrsize = sizeof(address);
+	int addrsize = sizeof(SOCKADDR_IN);
 	waittime.tv_usec = 1000;
 	strcpy_s(filename, _MAX_PATH, argv[FILENAME_RCVR]);
 	port = strtol(argv[PORT_RCVR], NULL, 10);
 	fopen_s(&message, filename, "wb");
 	if (!simplestartup(&startup))
 		return ERRORCODE;
-	address = initaddress(LOCALHOST, port);
+	address_rcvr = initaddress(LOCALHOST, port);
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == INVALID_SOCKET)
 		exit(ERRORCODE);
 	maxfd = s;
-	if (bind(s, (SOCKADDR*)&address, sizeof(address)) == SOCKET_ERROR)
+	if (bind(s, (SOCKADDR*)&address_rcvr, addrsize) == SOCKET_ERROR)
 		printf("%d", 1);
 	while (1)
 	{
@@ -48,50 +49,33 @@ int main(int argc, string* argv)
 
 		if (_kbhit())
 		{
-			char c = _getch();
-			if (c == 13)
-			{
-				printf("\n");
-				if (!strcmp(endbuf, END))
-					break;
-				else
-				{
-					endbuf[3] = '\0';
-					keystrokes = -1;
-				}
-			}
-			else
-			{
-				if (c > 31 && c < 127)
-				putc(c, stderr);
-				if (keystrokes < strlen(END) + 1)
-					endbuf[keystrokes] = c;				
-			}
-			keystrokes++;
+			scanf_s("%s", endbuf, 5);
+			if (!strcmp(endbuf, END))
+				break;
 		}
 		if (FD_ISSET(s, &fds))
 		{
-			blocki += recvfrom(s, rcvbuf, sizeof(rcvbuf) - 1, 0, (SOCKADDR*)&address, &senderaddrsize);
-			//printf("blocki: %d, rcvstr: %s\n", blocki, rcvstr);
-			if (blocki == SOCKET_ERROR)
+			currentbyte = recvfrom(s, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_sndr, &addrsize);
+			if (currentbyte == SOCKET_ERROR)
 			{
 				printf("RECV ERROR %d\n", WSAGetLastError());
 			}
-			//strncpy_s(rcvbuf, sizeof(rcvbuf), rcvstr + i, sizeof(rcvbuf) - 1);
-			//printf("rcvbuf before hamming: %s\n", rcvbuf);
-			unHamming(rcvbuf);
-			//printf("rcvbuf after hamming: %s\n", rcvbuf);
-			buffer[sll_i] = rcvbuf[0];
-			buffer[sll_i + 1] = rcvbuf[1];
-			sll_i += 2;
-			if (sll_i > BUFFER_SIZE_RCVR - 2)
+			blocki += currentbyte;
+			while (currentbyte != 0)
 			{
-				sll_i = 0;
+				Get__Data(packet, buffer, &currentbyte);
+				for (int i = 0; i < 16; i += 2)
+				{
+					unHamming(buffer + i);
+				}
 				logicshiftleftby11(buffer);
-				//printf("buffer right before writing is: %s\n", buffer);
 				fputs(buffer, message);
+
 			}
-			printf("%.2f%%\n", blocki / 298.888);
+			int x = (blocki / 6524576.16) * 10;
+			if (x != temp)
+				printf("%.2f%%\n", blocki / 6524576.16);
+			temp = x;
 		}
 	}
 	printf("Done!\n");
@@ -150,7 +134,6 @@ void unHamming(string str)
 
 	str[0] = 0;
 	str[1] = 0;
-	str[2] = 0;
 	for (int i = 1; i < 16; i++)
 	{
 		if (!ispowof2(i))
@@ -165,6 +148,45 @@ void unHamming(string str)
 		}
 	}
   }
+
+void Get__Data(string p, string data, int* currentbyte)
+{
+	unsigned long long word1 = 0, word2 = 0, mask1 = 0xFF, mask3 = 0x7F, mask2 = 0xF0;
+	unsigned int shift = 0;
+	word2 = ((unsigned long long)p[7] & mask2) >> 4;
+	for (int i = 0; i < 8; i++)
+	{
+		shift = 8 * i;
+		unsigned long long temp = p[i] & mask1;
+		word1 += temp << shift;
+		temp = p[i + 8] & mask1;
+		word2 += temp << (shift + 4);
+
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		word1 = word1 >> ((i == 0) ? 0 : 8);
+		data[2 * i] = (word1 & mask3) << 1;
+		word1 = word1 >> 7;
+		data[2 * i + 1] = word1 & mask1;
+
+		word2 = word2 >> ((i == 0) ? 0 : 8);
+		data[2 * i + 8] = (word2 & mask3) << 1;
+		word2 = word2 >> 7;
+		data[2 * i + 9] = word2 & mask1;
+	}
+	data[17] = '\0';
+
+	for (int i = 0; i < *currentbyte - 15; i++)
+	{
+		p[i] = p[i + 15];
+	}
+	for (int i = *currentbyte - 15; i < *currentbyte; i++)
+	{
+		p[i] = '\0';
+	}
+	*currentbyte -= 15;
+}
 
 //for (int i = 15; i > 0; i--)
 //{
