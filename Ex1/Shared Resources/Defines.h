@@ -20,6 +20,7 @@ typedef char* string;
 
 #define NUM_OF_ARGC_SNDR 4
 #define NUM_OF_ARGC_RCVR 3
+#define NUM_OF_ARGC_CHNL 6
 #define MAX_IP_LEN 15
 #define BUFFER_SIZE_SNDR 12
 #define STARTUP_FAIL "WSAStartup() Failed with Error: %d\n"

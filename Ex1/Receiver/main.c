@@ -72,14 +72,15 @@ int main(int argc, string* argv)
 				fputs(buffer, message);
 
 			}
-			int x = (blocki / 6524576.16) * 10;
+			int x = (blocki / 652.8) * 10;
 			if (x != temp)
-				printf("%.2f%%\n", blocki / 6524576.16);
+				printf("%.2f%%\n", blocki / 652.8);
 			temp = x;
 		}
 	}
 	printf("Done!\n");
 	fclose(message);
+	closesocket(s);
 	return SUCCESSCODE;
 }
 
@@ -119,6 +120,7 @@ BOOL ispowof2(int num)
 void unHamming(string str)
 {
 	unsigned int unhamming = 0, databits[16] = { 0 }, checkbits[5] = { 0 }, j = 0;
+	int check = 0;
 	unhamming = (unsigned int)str[0] & 0xFF;
 	unhamming += (((unsigned int)str[1]) << BYTESIZE) & 0xFF00;
 	for (int i = 0; i < 16; i++)
@@ -127,11 +129,21 @@ void unHamming(string str)
 	}
 	for (int i = 0; i < 4; i++)
 	{
-		checkbits[i + 1] = unhamming & (int)pow(2, pow(2, i));
+		checkbits[i + 1] = (unhamming >> (int)pow(2, i)) & 0x1;
 	}
 
 	// check errors
 
+	check = checkbits[1] ^ databits[3] ^ databits[5] ^ databits[7] ^ databits[9] ^ databits[11] ^ databits[13] ^ databits[15];
+	check += (checkbits[2] ^ databits[3] ^ databits[6] ^ databits[7] ^ databits[10] ^ databits[11] ^ databits[14] ^ databits[15]) << 1;
+	check += (checkbits[3] ^ databits[5] ^ databits[6] ^ databits[7] ^ databits[12] ^ databits[13] ^ databits[14] ^ databits[15]) << 2;
+	check += (checkbits[4] ^ databits[9] ^ databits[10] ^ databits[11] ^ databits[12] ^ databits[13] ^ databits[14] ^ databits[15]) << 3;
+	if (check != 0)
+	{
+		databits[check] = 1 - databits[check];
+	}
+
+	// check errors
 	str[0] = 0;
 	str[1] = 0;
 	for (int i = 1; i < 16; i++)
@@ -175,7 +187,7 @@ void Get__Data(string p, string data, int* currentbyte)
 		word2 = word2 >> 7;
 		data[2 * i + 9] = word2 & mask1;
 	}
-	data[17] = '\0';
+	data[16] = '\0';
 
 	for (int i = 0; i < *currentbyte - 15; i++)
 	{

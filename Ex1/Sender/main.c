@@ -48,29 +48,24 @@ int main(int argc, string* argv)
 			sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, sizeof(address));
 			Sleep(1);
 			currentbyte = 0;
-			for (int i = 0; i < sizeof(packet); i++)
+			for (int i = 0; i < sizeof(packet) - 1; i++)
 			{
 				packet[i] = '\0';
 			}
 		}
-		for (int i = 0; i < sizeof(buffer); i++)
+		for (int i = 0; i < sizeof(buffer) - 1; i++)
 		{
 			buffer[i] = '\0';
 		}
 		fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
 	}
-	//if (currentbyte != 0)
-	//{
-	//	string quicksend = { 0 };
-	//	if (stralloc(&quicksend, currentbyte, C))
-	//	{
-	//		strcpy_s(quicksend, currentbyte, packet);
-	//		quicksend[currentbyte] = '\0';
-	//		sendto(s, quicksend, currentbyte, 0, (SOCKADDR*)&address, sizeof(address));
-	//		free(quicksend);
-	//	}
-	//}
+	if (currentbyte != 0)
+	{
+		sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, sizeof(address));
+	
+	}
 	fclose(message);
+	closesocket(s);
 	return SUCCESSCODE;
 }
 
@@ -136,58 +131,12 @@ void Add__Data(string p, string data, int* currentbyte)
 	for (int i = 0; i < 8; i++)
 	{
 		p[*currentbyte + i] = (char)((word1 >> (BYTESIZE * i)) & 0xFF);
-		p[*currentbyte + i + 8] = (char)((word2 >> (BYTESIZE * i)) & 0xFF);
+		if (i < 7)
+			p[*currentbyte + i + 8] = (char)((word2 >> (BYTESIZE * i)) & 0xFF);
 	}
 	(*currentbyte) += 14;
 }
 
-void Get__Data(string p, string data, int* currentbyte)
-{
-	unsigned long long word1 = 0, word2 = 0, mask1 = 0xFF, mask3 = 0x7F, mask2 = 0xF0;
-	unsigned int shift = 0;
-	word2 = ((unsigned long long)p[7] & mask2) >> 4;
-	for (int i = 0; i < 8; i++)
-	{
-		shift = 8 * i;
-		unsigned long long temp = p[i] & mask1;
-		word1 += temp << shift;
-		//printf("Word1 -> ");
-		//for (int j = 63; j >= 0; j--)
-		//{
-		//	printf("%d", (word1 >> j) & 0x1);
-		//	if (j % 4 == 0)
-		//		printf(" ");
-		//}
-		//printf("\n");
-		temp = p[i + 8] & mask1;
-		word2 += temp << (shift + 4);
-
-	}
-	//printf("\n\n\n");
-	for (int i = 0; i < 4; i++)
-	{
-		word1 = word1 >> ((i == 0) ? 0 : 8);
-		data[2 * i] = (word1 & mask3) << 1;
-		word1 = word1 >> 7;
-		data[2 * i + 1] = word1 & mask1;
-
-		word2 = word2 >> ((i == 0) ? 0 : 8);
-		data[2 * i + 8] = (word2 & mask3) << 1;
-		word2 = word2 >> 7;
-		data[2 * i + 9] = word2 & mask1;
-	}
-	data[16] = '\0';
-
-	for (int i = 0; i < *currentbyte - 15; i++)
-	{
-		p[i] = p[i + 15];
-	}
-	for (int i = *currentbyte - 15; i < *currentbyte; i++)
-	{
-		p[i] = '\0';
-	}
-	*currentbyte -= 15;
-}
 
 //for (int j = 7; j >= 0; j--)
 //{

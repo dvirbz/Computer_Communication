@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared Resources\IOMalloc.c">
+      <Filter>Shared Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared Resources\WSA.c">
+      <Filter>Shared Resources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Shared Resources\Defines.h">
+      <Filter>Shared Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared Resources\IOMalloc.h">
+      <Filter>Shared Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared Resources\StructsAndEnums.h">
+      <Filter>Shared Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared Resources\WSA.h">
+      <Filter>Shared Resources</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{e66ebd70-819f-44dd-b8f2-48c165709544}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{de3d91f2-9831-46c0-874e-356fa4730e82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shared Resources">
+      <UniqueIdentifier>{5520332c-ada3-4de2-8768-4892afda1cf0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{efacc1e7-0457-4412-99b3-982d7bc1ff30}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
