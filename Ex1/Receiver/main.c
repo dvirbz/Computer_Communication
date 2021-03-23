@@ -72,9 +72,9 @@ int main(int argc, string* argv)
 				fputs(buffer, message);
 
 			}
-			int x = (blocki / 652.8) * 10;
+			int x = (blocki / 6116790.15) * 10;
 			if (x != temp)
-				printf("%.2f%%\n", blocki / 652.8);
+				printf("%.2f%%\n", blocki / 6116790.15);
 			temp = x;
 		}
 	}
