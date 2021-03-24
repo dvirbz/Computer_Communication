@@ -36,6 +36,7 @@ typedef char* string;
 #define PACKETSIZE 1501
 #define MALLOCFAIL "Failed To Allocate Memory.\n"
 #define INVALIDALLOC "Invalid Allocation type.\n"
+#define K_INIT 14
 
 
 #endif	// DEFINES_H

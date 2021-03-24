@@ -1,8 +1,8 @@
 ﻿  main.c
 C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(75,1): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
 C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(21,23): warning C4101: 'n': unreferenced local variable
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(181,37): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(183,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(186,41): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(188,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(185,37): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(187,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(190,41): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(192,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
   Receiver.vcxproj -> C:\Users\Benzu\source\repos\Ex1\Debug\Receiver.exe

@@ -23,6 +23,7 @@ int main(int argc, string* argv)
 	WSADATA startup;
 	SOCKADDR_IN address;
 	SOCKET s;
+	Summary sum = { 0, 0, 0, 0 };
 	strcpy_s(ip, MAX_IP_LEN, argv[IP_SNDR]);
 	strcpy_s(filename, _MAX_PATH, argv[FILENAME_SNDR]);
 	port = strtol(argv[PORT_SNDR], NULL, 10);
@@ -62,7 +63,6 @@ int main(int argc, string* argv)
 	if (currentbyte != 0)
 	{
 		sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, sizeof(address));
-	
 	}
 	fclose(message);
 	closesocket(s);

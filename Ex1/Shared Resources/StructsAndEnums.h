@@ -10,9 +10,14 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
-// Structs //
 typedef char* string;
-	
+// Structs //
+typedef struct
+{
+	int received;
+	int written;
+	int errors;
+}Summary;
 	
 
 

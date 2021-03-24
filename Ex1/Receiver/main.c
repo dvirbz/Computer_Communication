@@ -10,7 +10,7 @@
 
 void logicshiftleftby11(string str);
 int nonblockingrecv();
-void unHamming(string str);
+int unHamming(string str);
 void Get__Data(string p, string data, int* currentbyte);
 BOOL ispowof2(int num);
 
@@ -18,15 +18,16 @@ int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_RCVR);
 	char buffer[BUFFER_SIZE_RCVR] = "\0", filename[_MAX_PATH] = { 0 }, endbuf[5] = "\0", packet[PACKETSIZE] = { 0 };
-	int port = 0, maxfd, n, temp = -1, currentbyte = 0;
+	int port = 0, maxfd, n, temp = -1, currentbyte = 0, corrected = 0, addrsize = sizeof(SOCKADDR_IN);
 	TIMEVAL waittime = { 0 };
-	unsigned int keystrokes = 0, sll_i = 0, blocki = 0;
+	unsigned int keystrokes = 0;
 	fd_set fds;
 	FILE* message = { 0 };
 	WSADATA startup;
-	SOCKADDR_IN address_rcvr, address_sndr;
-	SOCKET s;
-	int addrsize = sizeof(SOCKADDR_IN);
+	SOCKADDR_IN address_rcvr = { 0 }, address_sndr = { 0 };
+	address_sndr.sin_port = 0;
+	SOCKET s, channel;
+	Summary sum = { 0, 0, 0 };
 	waittime.tv_usec = 1000;
 	strcpy_s(filename, _MAX_PATH, argv[FILENAME_RCVR]);
 	port = strtol(argv[PORT_RCVR], NULL, 10);
@@ -51,7 +52,23 @@ int main(int argc, string* argv)
 		{
 			scanf_s("%s", endbuf, 5);
 			if (!strcmp(endbuf, END))
+			{
+				sprintf_s(buffer, sizeof(buffer), "%d, %d, %d\r\n\r\n", sum.received, sum.written, sum.errors);
+				if (address_sndr.sin_port == 0)
+					break;
+				if ((channel = socket(AF_INET, SOCK_DGRAM, 0) == SOCKET_ERROR))
+				{
+					printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
+				}
+				//if (bind(channel, (SOCKADDR*)&address_sndr, addrsize))
+				//{
+				//	printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
+				//}
+				if (SOCKET_ERROR == sendto(channel, buffer, strlen(buffer), 0, (SOCKADDR*)&address_sndr, &addrsize))
+					printf("Failed to Send Data Through Socket with Error Code %d\n", WSAGetLastError());
+				closesocket(channel);
 				break;
+			}
 		}
 		if (FD_ISSET(s, &fds))
 		{
@@ -60,25 +77,28 @@ int main(int argc, string* argv)
 			{
 				printf("RECV ERROR %d\n", WSAGetLastError());
 			}
-			blocki += currentbyte;
+			sum.received += currentbyte;
 			while (currentbyte != 0)
 			{
 				Get__Data(packet, buffer, &currentbyte);
 				for (int i = 0; i < 16; i += 2)
 				{
-					unHamming(buffer + i);
+					sum.errors += unHamming(buffer + i);
 				}
 				logicshiftleftby11(buffer);
-				fputs(buffer, message);
+				sum.written += strlen(buffer);
+				fprintf(message, "%s", buffer);
 
 			}
-			int x = (blocki / 6116790.15) * 10;
-			if (x != temp)
-				printf("%.2f%%\n", blocki / 6116790.15);
-			temp = x;
+			//int x = (sum.written / 75.9) * 10;
+			//if (x != temp)
+			//{
+			//	printf("%.2f%%\n", sum.written / 75.9);
+			//	printf("corrected %d errors\n", corrected);
+			//}
+			//temp = x;
 		}
 	}
-	printf("Done!\n");
 	fclose(message);
 	closesocket(s);
 	return SUCCESSCODE;
@@ -117,7 +137,7 @@ BOOL ispowof2(int num)
 	return FALSE;
 }
 
-void unHamming(string str)
+int unHamming(string str)
 {
 	unsigned int unhamming = 0, databits[16] = { 0 }, checkbits[5] = { 0 }, j = 0;
 	int check = 0;
@@ -159,6 +179,7 @@ void unHamming(string str)
 			j++;
 		}
 	}
+	return (check != 0);
   }
 
 void Get__Data(string p, string data, int* currentbyte)
