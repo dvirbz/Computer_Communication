@@ -10,7 +10,7 @@
 #include <time.h>
 #include "IOMalloc.h"
 int flip(int len_packet, int start, int end, double q, double b);
-int flip_packet(int k, int recv_bytes_from_sender, char packet[], double q, double b);
+int flip_packet(int k, int recv_bytes_from_sender, char* packet, double q, double b);
 void Handle_FinalMessage(SOCKET recv_from_rcvr, SOCKET send_to_sndr,SOCKADDR* address_of_rcvr,
 	SOCKADDR* address_to_send_to_sndr, string ip_rcvr, int blocki, int tot_flips);
 void Calculate_RandomVariables(double prob, int* p_k, double* p_b, double* p_q, double* p_a);
@@ -43,18 +43,14 @@ int main(int argc, string* argv)
 	/*	Math to establish the random related variables  */
 	Calculate_RandomVariables(prob, &k, &b, &q, &a);
 	/*==========================================================================================*/
-	printf("a is: %f\n", a);
-	printf("b is: %f\n", b);
-	printf("q is: %f\n", q);
-	printf("p is: %f\n", prob);
-	printf("k is: %d\n", k);
+
 	/*Start WSA*/
-	if (!simplestartup(&startup))
+	if (!Simple__Startup(&startup))
 		return ERRORCODE;
 	/*==========================================================================================*/
 
 	/*Channel Address init and bind*/	
-	address_of_sndr = initaddress(LOCALHOST, listen_to_sender);
+	address_of_sndr = Init__Address(LOCALHOST, listen_to_sender);
 	if ((recv_from_sender = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
 	{
 		printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
@@ -67,15 +63,14 @@ int main(int argc, string* argv)
 	/*==========================================================================================*/
 
 	/* Receiver Address init*/
-	address_of_rcvr = initaddress(argv[IP_RCVR], rcvr_listen_on);
+	address_of_rcvr = Init__Address(argv[IP_RCVR], rcvr_listen_on);
 	if ((send_to_rcvr = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
 	{
 		printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
 		exit(ERRORCODE);
 	}
 	/*==========================================================================================*/	
-	address_to_send_to_sndr = initaddress(0, 0);
-	maxfd = max(recv_from_sender,send_to_rcvr);	
+	maxfd = max(recv_from_sender, send_to_rcvr);
 	int count_packets = 0;
 
 	while (1)
@@ -186,7 +181,7 @@ void Handle_FinalMessage(SOCKET recv_from_rcvr, SOCKET send_to_sndr, SOCKADDR* a
 	}
 	/*	Print Final message  */
 	inet_ntop(AF_INET, &((SOCKADDR_IN*)address_to_send_to_sndr)->sin_addr, ip, sizeof(ip));
-	printf("sender: %s\nreceived: %s\n%d bytes, flipped %d bits\n", ip, ip_rcvr, blocki, tot_flips);
+	printf("sender: %s\nreceiver: %s\n%d bytes, flipped %d bits\n", ip, ip_rcvr, blocki, tot_flips);
 
 	/*  Send Final message to sender*/
 	if (SOCKET_ERROR == sendto(send_to_sndr, packet, recv_bytes_from_sender, 0, address_to_send_to_sndr, addrsize))

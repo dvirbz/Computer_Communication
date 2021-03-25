@@ -7,132 +7,88 @@
 #include <inttypes.h>
 #include "IOMalloc.h"
 
-
+FILE* Init(string ip, int* port, string* argv);
 void logicshiftrightby11(string str);
 void hamming(string str);
-void Add__Data(string p, string data, int* currentbyte);
-void Get__Data(string p, string data, int* currentbyte);
+void Concat_Hamming(string buffer);
+void Add_Data(string p, string data, int* currentbyte);
+void Reset_String(string packet);
+void Build_Packet(string buffer, SOCKET s, int* currentbyte, SOCKADDR* address, FILE* message);
+void Send_Packet(SOCKET s, string packet, int* currentbyte, SOCKADDR* address, FILE* message);
+void Final_Recv(SOCKET sr, SOCKADDR* address);
 
 
 int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_SNDR);
-	char buffer[BUFFER_SIZE_RCVR] = { 0 }, ip[MAX_IP_LEN] = { 0 }, filename[_MAX_PATH] = { 0 }, packet[PACKETSIZE] = { 0 };
-	int port = 0, currentbyte = 0, maxfd, addrsize = sizeof(SOCKADDR);
+	char buffer[BUFFER_SIZE_RCVR] = { 0 }, ip[MAX_IP_LEN] = { 0 }, packet[PACKETSIZE] = { 0 };
+	int port = 0, currentbyte = 0, maxfd, read;
 	FILE* message = { 0 };
-	WSADATA startup;
-	SOCKADDR_IN address, selfaddress;
-	SOCKET s, sr;
+	SOCKADDR_IN address;
+	SOCKET sd_write;
 	fd_set fds_read, fds_write;
 	Summary sum = { 0, 0, 0 };
-	TIMEVAL waittime = { 0 };
-	waittime.tv_usec = 1000;
-	strcpy_s(ip, MAX_IP_LEN, argv[IP_SNDR]);
-	strcpy_s(filename, _MAX_PATH, argv[FILENAME_SNDR]);
-	port = strtol(argv[PORT_SNDR], NULL, 10);
-	fopen_s(&message, filename, "rb");
-	if (!simplestartup(&startup))
+	TIMEVAL waittime = { .tv_sec = 0, .tv_usec = 1000 };
+	// Init File and Command Line Arguments // 
+	if (NULL == (message = Init(ip, &port, argv)))
 		return ERRORCODE;
-	address = initaddress(ip, port);
-	selfaddress = initaddress(LOCALHOST, 0);
-	s = socket(AF_INET, SOCK_DGRAM, 0);
-	if (s == INVALID_SOCKET)
-		exit(ERRORCODE);
-	sr = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sr == INVALID_SOCKET)
-		exit(ERRORCODE);
-	maxfd = max(s, sr);
 
-
-	if (bind(sr, (SOCKADDR*)&selfaddress, addrsize))
+	// Init Send and Receive addresses // 
+	address = Init__Address(ip, port);
+	
+	// Init Sockets // 
+	if (INVALID_SOCKET == (sd_write = socket(AF_INET, SOCK_DGRAM, 0)))
 	{
-		printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
+		printf("Failed To Open Sockets, Error Code is: %d\n", WSAGetLastError());
+		exit(ERRORCODE);
+	}
+	maxfd = sd_write;
+
+	read = fread(buffer, 1, BUFFER_SIZE_SNDR - 1, message);
+	if (read < BUFFER_SIZE_SNDR - 1)
+	{
+		printf("File is not Divisible by 11, Tail of %d Bytes left\n", read);
 	}
 
-	fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
 	while (1)
 	{
 		FD_ZERO(&fds_read);
-		FD_SET(sr, &fds_read);
+		FD_SET(sd_write, &fds_read);
 		FD_ZERO(&fds_write);
-		FD_SET(s, &fds_write);
-
+		FD_SET(sd_write, &fds_write);
 		select(maxfd + 1, &fds_read, &fds_write, NULL, &waittime);
 
-		if (FD_ISSET(sr, &fds_read))
+		if (FD_ISSET(sd_write, &fds_read))
 		{
-			currentbyte = recvfrom(sr, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address, &addrsize);
-			if (currentbyte == SOCKET_ERROR)
-			{
-				printf("RECV ERROR %d\n", WSAGetLastError());
-			}
-			closesocket(sr);
-			int i = 0, j = 0;
-			char temp[10] = "\0";
-			while (buffer[i] != ',')
-			{
-				temp[i] = buffer[i];
-				i++;
-			}
-			i++;
-			sum.received = strtol(temp, NULL, 10);
-			while (buffer[i] != ',')
-			{
-				temp[j] = buffer[i];
-				i++;
-				j++;
-			}
-			i++;
-			j = 0;
-			sum.written = strtol(temp, NULL, 10);
-			while (buffer[i] != ';')
-			{
-				temp[j] = buffer[i];
-				i++;
-				j++;
-			}
-			i++;
-			j = 0;
-			sum.errors = strtol(temp, NULL, 10);
-			printf("receiver: %d\nwritten: %d\ndetected & corrected: %d errors\n", sum.received, sum.written, sum.errors);
+			printf("%d\n", 1);
+			Final_Recv(sd_write, (SOCKADDR*)&address);
 			break;
 		}
 
-		if (!feof(message) && FD_ISSET(s, &fds_write))
+		if (!feof(message) && FD_ISSET(sd_write, &fds_write))
 		{
-			logicshiftrightby11(buffer);
-			for (int i = 0; i < BUFFER_SIZE_RCVR - 1; i += 2)
-			{
-				hamming(buffer + i);
-			}
-			buffer[16] = '\0';
-			Add__Data(packet, buffer, &currentbyte);
-			if (currentbyte == PACKETSIZE - 1)
-			{
-				sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, addrsize);
-				//Sleep(1);
-				currentbyte = 0;
-				for (int i = 0; i < sizeof(packet) - 1; i++)
-				{
-					packet[i] = '\0';
-				}
-			}
-			for (int i = 0; i < sizeof(buffer) - 1; i++)
-			{
-				buffer[i] = '\0';
-			}
-			fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
-		}
-		if (feof(message) && currentbyte != 0 && FD_ISSET(s, &fds_write))
-		{
-			sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, addrsize);
-			currentbyte = 0;
+			Build_Packet(buffer, sd_write, &currentbyte, (SOCKADDR*)&address, message);
 		}
 	}
 
 	fclose(message);
-	closesocket(s);
+	if (closesocket(sd_write))
+		printf("Failed To Close Socket\n");
 	return SUCCESSCODE;
+}
+
+FILE* Init(string ip, int* port, string* argv)
+{
+	FILE* message;
+	char filename[_MAX_PATH] = { 0 };
+	WSADATA startup;
+	strcpy_s(ip, MAX_IP_LEN, argv[IP_SNDR]);
+	strcpy_s(filename, _MAX_PATH, argv[FILENAME_SNDR]);
+	*port = strtol(argv[PORT_SNDR], NULL, 10);
+	fopen_s(&message, filename, "rb");
+	if (!Simple__Startup(&startup))
+		return NULL;
+	return message;
 }
 
 void hamming(string str)
@@ -174,7 +130,7 @@ void logicshiftrightby11(string str)
 	}		
 }
 
-void Add__Data(string p, string data, int* currentbyte)
+void Add_Data(string p, string data, int* currentbyte)
 {
 	unsigned long long word1 = 0, word2 = 0, cmask, transfermask, temp = 0, compliment = 0;
 	unsigned int byte_transfer;
@@ -183,9 +139,9 @@ void Add__Data(string p, string data, int* currentbyte)
 	transfermask = (unsigned long long)(pow(2, byte_transfer) - 1);
 	for (int i = 0; i < 8; i += 2)
 	{
-		temp = (unsigned long long)(((data[i] >> 1) & 0x7F) + (data[i + 1] << (BYTESIZE - 1)));
+		temp = (unsigned long long)(((data[i] >> 1) & 0x7F)) + (unsigned long long)((data[i + 1] << (BYTESIZE - 1)));
 		word1 += ((temp & 0x7FFF) << (HAMMINGSIZE * (i / 2)));
-		temp = (unsigned long long)(((data[i + 8] >> 1) & 0x7F) + (data[i + 9] << (BYTESIZE - 1)));
+		temp = (unsigned long long)((data[i + 8] >> 1) & 0x7F) + (unsigned long long)(data[i + 9] << (BYTESIZE - 1));
 		word2 += ((temp & 0x7FFF) << (HAMMINGSIZE * (i / 2)));
 	}
 	compliment = cmask & word1;
@@ -203,48 +159,66 @@ void Add__Data(string p, string data, int* currentbyte)
 	(*currentbyte) += 14;
 }
 
+void Concat_Hamming(string buffer)
+{
+	for (int i = 0; i < BUFFER_SIZE_RCVR - 1; i += 2)
+	{
+		hamming(buffer + i);
+	}
+	buffer[BUFFER_SIZE_RCVR - 1] = '\0';
 
-//for (int j = 7; j >= 0; j--)
-//{
-//	printf("%d", (buffer[i + 1] >> j) & 0x1);
-//	if (j % 4 == 0)
-//		printf(" ");
-//}
-//for (int j = 7; j > 0; j--)
-//{
-//	printf("%d", (buffer[i] >> j) & 0x1);
-//	if (j % 4 == 0)
-//		printf(" ");
-//}
-//printf("\n");
+}
 
-//for (int i = 15; i >= 0; i -= 2)
-//{
-//	for (int j = 7; j >= 0; j--)
-//	{
-//		printf("%d", (buffer[i] >> j) & 0x1);
-//	}
-//	for (int j = 7; j > 0; j--)
-//	{
-//		printf("%d", (buffer[i - 1] >> j) & 0x1);
-//	}
-//	printf(" ");
-//}
-//printf("\n");
-//printf("\n");
-//Add__Data(packet, buffer, 0);
-//for (int i = 15; i >= 0; i -= 2)
-//{
-//	for (int j = 7; j >= 0 && i != 15; j--)
-//	{
-//		printf("%d", (packet[i] >> j) & 0x1);
-//		if ((i * 8 + j) % 15 == 0)
-//			printf(" ");
-//	}
-//	for (int j = 7; j >= 0; j--)
-//	{
-//		printf("%d", (packet[i - 1] >> j) & 0x1);
-//	}
-//}
-//printf("\n");
-//printf("\n");
+void Reset_String(string packet)
+{
+	for (int i = 0; i < sizeof(packet) - 1; i++)
+	{
+		packet[i] = '\0';
+	}
+}
+
+void Build_Packet(string buffer, SOCKET s, int* currentbyte, SOCKADDR* address, FILE* message)
+{
+	char packet[PACKETSIZE] = { 0 };
+	int read = 0;
+	logicshiftrightby11(buffer);
+	Concat_Hamming(buffer);
+	Add_Data(packet, buffer, currentbyte);
+	//Send_Packet(s, packet, currentbyte, address, message);
+	Reset_String(buffer);
+	read = fread(buffer, 1, BUFFER_SIZE_SNDR - 1, message);
+	if (read > 0 && read < BUFFER_SIZE_SNDR - 1)
+	{
+		printf("File is not Divisible by 11, Tail of %d Bytes left\n", read);
+	}
+	Send_Packet(s, packet, currentbyte, address, message);
+}
+
+void Send_Packet(SOCKET s, string packet, int *currentbyte, SOCKADDR* address, FILE* message)
+{
+	if ((feof(message) && *currentbyte != 0) || *currentbyte == PACKETSIZE - 1)
+	{
+		MC__Send(packet, *currentbyte, s, address);
+		*currentbyte = 0;
+		Reset_String(packet);
+	}
+}
+
+void Final_Recv(SOCKET s, SOCKADDR* address)
+{
+	char packet[PACKETSIZE] = { 0 };
+	string temp, NotUsed = { 0 };
+	int received, written, errors, addrsize = sizeof(SOCKADDR);
+	if (SOCKET_ERROR == (recvfrom(s, packet, sizeof(packet) - 1, 0, address, &addrsize)))
+	{
+		printf("RECV ERROR %d\n", WSAGetLastError());
+	}
+	temp = strtok_s(packet, ",\r", &NotUsed);
+	received = strtol(temp, NULL, 10);
+	temp = strtok_s(NULL, ",\r", &NotUsed);
+	written = strtol(temp, NULL, 10);
+	temp = strtok_s(NULL, ",\r", &NotUsed);
+	errors = strtol(temp, NULL, 10);
+	printf("receiver: %d\nwritten: %d\ndetected & corrected: %d errors\n", received, written, errors);
+}
+

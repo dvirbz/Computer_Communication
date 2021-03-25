@@ -12,22 +12,10 @@
 #include "StructsAndEnums.h"
 
 // Function Declerations //
-BOOL simplestartup(WSADATA* startup);
+BOOL Simple__Startup(WSADATA* startup);
 
-SOCKADDR_IN initaddress(string ip, int port);
+SOCKADDR_IN Init__Address(string ip, int port);
 
-transfer_result SendBuffer(const char* Buffer, int BytesToSend, SOCKET sd);
-
-transfer_result ReceiveBuffer(char* OutputBuffer, int RemainingBytesToReceive, SOCKET sd);
-
-transfer_result SendString(const char* Str, SOCKET sd);
-
-transfer_result ReceiveString(char** OutputStrPtr, SOCKET sd);
-
-BOOL breakmessage(string* message, string* rest);
-
-BOOL breakresults(string* paramlist, string* param1, string* param2, string* param3, string* param4);
-
-BOOL gracefuldisconnection(SOCKET* sock);
+int MC__Send(string ToSend, int size, SOCKET sd, SOCKADDR* address);
 
 #endif // WSA_H
