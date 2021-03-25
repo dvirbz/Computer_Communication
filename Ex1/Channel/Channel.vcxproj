@@ -141,12 +141,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Shared Resources\IOMalloc.c" />
+    <ClCompile Include="..\Shared Resources\Queue.c" />
     <ClCompile Include="..\Shared Resources\WSA.c" />
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Shared Resources\Defines.h" />
     <ClInclude Include="..\Shared Resources\IOMalloc.h" />
+    <ClInclude Include="..\Shared Resources\Queue.h" />
     <ClInclude Include="..\Shared Resources\StructsAndEnums.h" />
     <ClInclude Include="..\Shared Resources\WSA.h" />
   </ItemGroup>

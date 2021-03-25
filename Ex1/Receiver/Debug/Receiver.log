@@ -1,10 +1,13 @@
-﻿  main.c
+﻿  IOMalloc.c
+  WSA.c
+  main.c
 C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(72,1): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
 C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(25,23): warning C4101: 'n': unreferenced local variable
 C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(28,19): warning C4101: 'fds_write': unreferenced local variable
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(203,37): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(205,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(208,41): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(210,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(255,7): warning C4101: 'ip': unreferenced local variable
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(204,37): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(206,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(209,41): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(211,34): warning C4244: '=': conversion from 'unsigned __int64' to 'char', possible loss of data
+C:\Users\Benzu\source\repos\Ex1\Receiver\main.c(256,7): warning C4101: 'ip': unreferenced local variable
+  Generating Code...
   Receiver.vcxproj -> C:\Users\Benzu\source\repos\Ex1\Debug\Receiver.exe

@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include "IOMalloc.h"
+#include <Queue.h>
+
 int flip(int len_packet, int start, int end, double q, double b);
 int flip_packet(int k, int recv_bytes_from_sender, char* packet, double q, double b);
 void Handle_FinalMessage(SOCKET recv_from_rcvr, SOCKET send_to_sndr,SOCKADDR* address_of_rcvr,
@@ -30,7 +32,7 @@ int main(int argc, string* argv)
 	WSADATA startup;
 	SOCKADDR_IN address_of_rcvr, address_of_sndr, address_to_send_to_sndr = { 0 };
 	SOCKET recv_from_sender, send_to_rcvr;
-	int addrsize = sizeof(SOCKADDR_IN), addrsize_rcvr_from_sndr = sizeof(SOCKADDR_IN), addrsize_rcvr_from_rcvr = sizeof(SOCKADDR_IN);
+	int addrsize = sizeof(SOCKADDR_IN);
 
 /*==============================================================================================================*/		
 	
@@ -92,21 +94,25 @@ int main(int argc, string* argv)
 
 		if (FD_ISSET(recv_from_sender, &read_fds))// && FD_ISSET(send_to_rcvr,&write_fds))
 		{
-			if ((recv_bytes_from_sender = recvfrom(recv_from_sender, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_to_send_to_sndr, &addrsize_rcvr_from_sndr)) == SOCKET_ERROR)
+			if ((recv_bytes_from_sender = recvfrom(recv_from_sender, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_to_send_to_sndr, &addrsize)) == SOCKET_ERROR)
 			{				
 				printf("RECV ERROR %d\n", WSAGetLastError());				
 			}
-			count_packets++;			
+			count_packets++;	
 			tot_flips += flip_packet(k, recv_bytes_from_sender, packet, q, b);
-			printf("Flipped: %d\n", tot_flips);
-
+			//printf("Flipped: %d\n", tot_flips);
 			blocki += recv_bytes_from_sender;
-			int bytes_to_send = recv_bytes_from_sender;
-			while (bytes_to_send > 0)
-			{
-				bytes_to_send -= sendto(send_to_rcvr, packet, recv_bytes_from_sender, 0, (SOCKADDR*)&address_of_rcvr, addrsize);
-			}						
+			MC__Send(packet, recv_bytes_from_sender, send_to_rcvr, (SOCKADDR*)&address_of_rcvr);
+			Sleep(1);
 		}
+		int x = (blocki / 6116790.15) * 10;
+		if (x != temp)
+		{
+			printf("%.2f%%\n", blocki / 6116790.15);
+			//printf("flipped: %d ompared to %d packets\n", tot_flips, count_packets);
+		}
+
+		temp = x;
 	}
 	printf("Done!\n");
 	closesocket(recv_from_sender);
@@ -204,11 +210,6 @@ void Calculate_RandomVariables(double prob, int* p_k, double* p_b, double* p_q, 
 		{
 			b = pow(b * a - a + 1, 1 / (double)k);
 		}
-		printf("a is: %f\n", a);
-		printf("b is: %f\n", b);
-		printf("q is: %f\n", q);
-		printf("p is: %f\n", prob);
-		printf("k is: %d\n", k);
 	} while (q == 1.0);
 	*p_k = k, * p_b = b, * p_a = a, * p_q = q;
 }

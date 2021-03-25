@@ -176,10 +176,11 @@ int unHamming(string str)
 int Concat_unHamming(string buffer)
 {
 	int count = 0;
-	for (int i = 0; i < 16; i += 2)
+	for (int i = 0; i < BUFFER_SIZE_RCVR - 1; i += 2)
 	{
 		count += unHamming(buffer + i);
 	}
+	buffer[BUFFER_SIZE_RCVR - 1] = '\0';
 	return count;
 }
 
@@ -187,13 +188,13 @@ void Get_Data(string p, string data, int* currentbyte)
 {
 	unsigned long long word1 = 0, word2 = 0, mask1 = 0xFF, mask3 = 0x7F, mask2 = 0xF0;
 	unsigned int shift = 0;
-	word2 = ((unsigned long long)p[7] & mask2) >> 4;
+	word2 = ((unsigned long long)(p[7]) & mask2) >> 4;
 	for (int i = 0; i < 8; i++)
 	{
 		shift = 8 * i;
-		unsigned long long temp = p[i] & mask1;
+		unsigned long long temp = (unsigned long long)(p[i]) & mask1;
 		word1 += temp << shift;
-		temp = p[i + 8] & mask1;
+		temp = (unsigned long long)(p[i + 8]) & mask1;
 		word2 += temp << (shift + 4);
 
 	}
