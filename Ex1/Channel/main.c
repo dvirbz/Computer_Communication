@@ -24,7 +24,7 @@ int main(int argc, string* argv)
 	fd_set read_fds, write_fds;
 	WSADATA startup;
 	SOCKADDR_IN address_rcvr, address_sndr;
-	SOCKET send, recv;
+	SOCKET send, recv, sender;
 	int addrsize = sizeof(SOCKADDR_IN);
 	waittime.tv_usec = 1000;
 	port_channel = strtol(argv[PORT_CHNL], NULL, 10);
@@ -68,25 +68,60 @@ int main(int argc, string* argv)
 		exit(ERRORCODE);
 
 	maxfd = max(send,recv);
-	if (bind(send, (SOCKADDR*)&address_sndr, addrsize) == SOCKET_ERROR)
-		printf("%d", 1);
+	if (bind(send, (SOCKADDR*)&address_sndr, addrsize))
+	{
+		printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
+	}
 	int counter = 0;
 	while (1)
 	{
 		FD_ZERO(&read_fds);
 		FD_SET(send, &read_fds);
 		FD_SET(recv, &read_fds);
-		/*FD_ZERO(&write_fds);
-		FD_SET(send, &write_fds);
-		FD_SET(recv, &write_fds);*/
+		FD_ZERO(&write_fds);
+		FD_SET(recv, &write_fds);
+		//FD_SET(send, &write_fds);
 
-		select(maxfd + 1, &read_fds, NULL, NULL, &waittime);
+		select(maxfd + 1, &read_fds, &write_fds, NULL, &waittime);
 
 		if (FD_ISSET(recv, &read_fds))
 		{
+			char ip[MAX_IP_LEN];
+			address_rcvr.sin_port = 0;
+			closesocket(recv);
 
+			if ((recv = socket(AF_INET, SOCK_DGRAM, 0) == SOCKET_ERROR))
+			{
+				printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
+			}
+
+			if (bind(recv, (SOCKADDR*)&address_rcvr, addrsize))
+			{
+				printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
+			}
+
+			if ((recv_bytes_from_sender = recvfrom(recv, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_rcvr, &addrsize)) == SOCKET_ERROR)
+			{
+				printf("Failed to Recv Data Through Socket with Error Code %d\n", WSAGetLastError());
+			}
+
+			inet_ntop(AF_INET,  &(address_sndr.sin_addr), ip, sizeof(ip));
+			printf("sender: %s\nreceived: %s\n%d bytes, flipped %d bits\n", ip, argv[IP_RCVR], blocki, tot_flips);
+
+			if ((sender = socket(AF_INET, SOCK_DGRAM, 0) == SOCKET_ERROR))
+			{
+				printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
+			}
+
+			if (SOCKET_ERROR == sendto(sender, packet, recv_bytes_from_sender, 0, (SOCKADDR*)&address_sndr, addrsize))
+			{
+				printf("Failed to Send Data Through Socket with Error Code %d\n", WSAGetLastError());
+			}
+			Sleep(1000);
+			closesocket(sender);
+			break;
 		}
-		if (FD_ISSET(send, &read_fds))
+		if (FD_ISSET(send, &read_fds) && FD_ISSET(recv,&write_fds))
 		{
 			recv_bytes_from_sender = recvfrom(send, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_sndr, &addrsize);
 			if (recv_bytes_from_sender == SOCKET_ERROR)
@@ -94,10 +129,10 @@ int main(int argc, string* argv)
 				printf("RECV ERROR %d\n", WSAGetLastError());
 			}
 			counter++;
-			int POW = pow(2, K_INIT - k);
+			int POW = pow(2, (double)(K_INIT) - k);
 			for (int i = 0; i < POW; i++)
 			{
-				flips += flip(packet, recv_bytes_from_sender * 8, i * pow(2, k), (i + 1) * pow(2, k) - 1, q, b);
+				flips += flip(packet, recv_bytes_from_sender * 8, i * (int)pow(2, k), (i + 1) * (int)pow(2, k) - 1, q, b);
 			}
 			int* list_rnd = { 0 };
 			if (!intalloc(&list_rnd, flips, C))
@@ -126,7 +161,7 @@ int main(int argc, string* argv)
 			}
 			tot_flips += flips;
 			flips = 0;
-			sendto(recv, packet, recv_bytes_from_sender, 0, (SOCKADDR*)&address_rcvr, &addrsize);
+			sendto(recv, packet, recv_bytes_from_sender, 0, (SOCKADDR*)&address_rcvr, addrsize);			
 			blocki += recv_bytes_from_sender;
 			int x = (blocki / 6116790.15) * 10;
 			if (x != temp)
@@ -139,6 +174,7 @@ int main(int argc, string* argv)
 	}
 	printf("Done!\n");
 	closesocket(send);
+	closesocket(recv);
 	return SUCCESSCODE;
 }
 

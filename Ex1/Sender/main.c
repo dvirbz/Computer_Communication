@@ -18,12 +18,15 @@ int main(int argc, string* argv)
 {
 	assert(argc == NUM_OF_ARGC_SNDR);
 	char buffer[BUFFER_SIZE_RCVR] = { 0 }, ip[MAX_IP_LEN] = { 0 }, filename[_MAX_PATH] = { 0 }, packet[PACKETSIZE] = { 0 };
-	int port = 0, currentbyte = 0;
+	int port = 0, currentbyte = 0, maxfd, addrsize = sizeof(SOCKADDR);
 	FILE* message = { 0 };
 	WSADATA startup;
-	SOCKADDR_IN address;
-	SOCKET s;
-	Summary sum = { 0, 0, 0, 0 };
+	SOCKADDR_IN address, selfaddress;
+	SOCKET s, sr;
+	fd_set fds_read, fds_write;
+	Summary sum = { 0, 0, 0 };
+	TIMEVAL waittime = { 0 };
+	waittime.tv_usec = 1000;
 	strcpy_s(ip, MAX_IP_LEN, argv[IP_SNDR]);
 	strcpy_s(filename, _MAX_PATH, argv[FILENAME_SNDR]);
 	port = strtol(argv[PORT_SNDR], NULL, 10);
@@ -31,39 +34,102 @@ int main(int argc, string* argv)
 	if (!simplestartup(&startup))
 		return ERRORCODE;
 	address = initaddress(ip, port);
+	selfaddress = initaddress(LOCALHOST, 0);
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == INVALID_SOCKET)
 		exit(ERRORCODE);
+	sr = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sr == INVALID_SOCKET)
+		exit(ERRORCODE);
+	maxfd = max(s, sr);
+
+
+	if (bind(sr, (SOCKADDR*)&selfaddress, addrsize))
+	{
+		printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
+	}
+
 	fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
-	while (!feof(message))
+	while (1)
 	{
-		logicshiftrightby11(buffer);
-		for (int i = 0; i < BUFFER_SIZE_RCVR - 1; i += 2)
+		FD_ZERO(&fds_read);
+		FD_SET(sr, &fds_read);
+		FD_ZERO(&fds_write);
+		FD_SET(s, &fds_write);
+
+		select(maxfd + 1, &fds_read, &fds_write, NULL, &waittime);
+
+		if (FD_ISSET(sr, &fds_read))
 		{
-			hamming(buffer + i);
-		}
-		buffer[16] = '\0';
-		Add__Data(packet, buffer, &currentbyte);
-		if (currentbyte == PACKETSIZE - 1)
-		{
-			sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, sizeof(address));
-			Sleep(1);
-			currentbyte = 0;
-			for (int i = 0; i < sizeof(packet) - 1; i++)
+			currentbyte = recvfrom(sr, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address, &addrsize);
+			if (currentbyte == SOCKET_ERROR)
 			{
-				packet[i] = '\0';
+				printf("RECV ERROR %d\n", WSAGetLastError());
 			}
+			closesocket(sr);
+			int i = 0, j = 0;
+			char temp[10] = "\0";
+			while (buffer[i] != ',')
+			{
+				temp[i] = buffer[i];
+				i++;
+			}
+			i++;
+			sum.received = strtol(temp, NULL, 10);
+			while (buffer[i] != ',')
+			{
+				temp[j] = buffer[i];
+				i++;
+				j++;
+			}
+			i++;
+			j = 0;
+			sum.written = strtol(temp, NULL, 10);
+			while (buffer[i] != ';')
+			{
+				temp[j] = buffer[i];
+				i++;
+				j++;
+			}
+			i++;
+			j = 0;
+			sum.errors = strtol(temp, NULL, 10);
+			printf("receiver: %d\nwritten: %d\ndetected & corrected: %d errors\n", sum.received, sum.written, sum.errors);
+			break;
 		}
-		for (int i = 0; i < sizeof(buffer) - 1; i++)
+
+		if (!feof(message) && FD_ISSET(s, &fds_write))
 		{
-			buffer[i] = '\0';
+			logicshiftrightby11(buffer);
+			for (int i = 0; i < BUFFER_SIZE_RCVR - 1; i += 2)
+			{
+				hamming(buffer + i);
+			}
+			buffer[16] = '\0';
+			Add__Data(packet, buffer, &currentbyte);
+			if (currentbyte == PACKETSIZE - 1)
+			{
+				sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, addrsize);
+				//Sleep(1);
+				currentbyte = 0;
+				for (int i = 0; i < sizeof(packet) - 1; i++)
+				{
+					packet[i] = '\0';
+				}
+			}
+			for (int i = 0; i < sizeof(buffer) - 1; i++)
+			{
+				buffer[i] = '\0';
+			}
+			fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
 		}
-		fread(buffer, BUFFER_SIZE_SNDR - 1, 1, message);
+		if (feof(message) && currentbyte != 0 && FD_ISSET(s, &fds_write))
+		{
+			sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, addrsize);
+			currentbyte = 0;
+		}
 	}
-	if (currentbyte != 0)
-	{
-		sendto(s, packet, currentbyte, 0, (SOCKADDR*)&address, sizeof(address));
-	}
+
 	fclose(message);
 	closesocket(s);
 	return SUCCESSCODE;

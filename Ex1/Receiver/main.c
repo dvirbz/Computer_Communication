@@ -39,8 +39,10 @@ int main(int argc, string* argv)
 	if (s == INVALID_SOCKET)
 		exit(ERRORCODE);
 	maxfd = s;
-	if (bind(s, (SOCKADDR*)&address_rcvr, addrsize) == SOCKET_ERROR)
-		printf("%d", 1);
+	if (bind(s, (SOCKADDR*)&address_rcvr, addrsize))
+	{
+		printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
+	}
 	while (1)
 	{
 		FD_ZERO(&fds);
@@ -53,7 +55,8 @@ int main(int argc, string* argv)
 			scanf_s("%s", endbuf, 5);
 			if (!strcmp(endbuf, END))
 			{
-				sprintf_s(buffer, sizeof(buffer), "%d, %d, %d\r\n\r\n", sum.received, sum.written, sum.errors);
+				sprintf_s(packet, sizeof(packet), "%d, %d, %d\r\n\r\n", sum.received, sum.written, sum.errors);
+				printf("received: %d\nwrote: %d\ndetected & corrected %d errors\n", sum.received, sum.written, sum.errors);
 				if (address_sndr.sin_port == 0)
 					break;
 				if ((channel = socket(AF_INET, SOCK_DGRAM, 0) == SOCKET_ERROR))
@@ -64,7 +67,10 @@ int main(int argc, string* argv)
 				//{
 				//	printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
 				//}
-				if (SOCKET_ERROR == sendto(channel, buffer, strlen(buffer), 0, (SOCKADDR*)&address_sndr, &addrsize))
+				char ip[MAX_IP_LEN];
+				inet_ntop(AF_INET, &(address_sndr.sin_addr), ip, sizeof(ip));
+				printf("port is: %d, ip is: %s\n", address_sndr.sin_port, ip);
+				if (SOCKET_ERROR == sendto(channel, packet, strlen(packet), 0, (SOCKADDR*)&address_sndr, addrsize))
 					printf("Failed to Send Data Through Socket with Error Code %d\n", WSAGetLastError());
 				closesocket(channel);
 				break;
