@@ -1,5 +1,0 @@
-﻿  main.c
-C:\Users\Benzu\source\repos\Ex1\Channel\main.c(132,1): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Channel\main.c(166,1): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Users\Benzu\source\repos\Ex1\Channel\main.c(19,31): warning C4101: 'n': unreferenced local variable
-  Channel.vcxproj -> C:\Users\Benzu\source\repos\Ex1\Debug\Channel.exe
