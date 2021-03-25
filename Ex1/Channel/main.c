@@ -9,12 +9,11 @@
 #include <stdlib.h>
 #include <time.h>
 #include "IOMalloc.h"
-#include <Queue.h>
 
 int flip(int len_packet, int start, int end, double q, double b);
 int flip_packet(int k, int recv_bytes_from_sender, char* packet, double q, double b);
-void Handle_FinalMessage(SOCKET recv_from_rcvr, SOCKET send_to_sndr,SOCKADDR* address_of_rcvr,
-	SOCKADDR* address_to_send_to_sndr, string ip_rcvr, int blocki, int tot_flips);
+void Handle_FinalMessage(SOCKET sd, SOCKADDR* address_of_rcvr,
+	SOCKADDR* address_to_send_to_sndr, string ip_rcvr, int blocki, int tot_flips, string packet, int recv_bytes_from_sender);
 void Calculate_RandomVariables(double prob, int* p_k, double* p_b, double* p_q, double* p_a);
 
 int main(int argc, string* argv)
@@ -30,12 +29,12 @@ int main(int argc, string* argv)
 	unsigned int blocki = 0;
 	fd_set read_fds, write_fds;
 	WSADATA startup;
-	SOCKADDR_IN address_of_rcvr, address_of_sndr, address_to_send_to_sndr = { 0 };
-	SOCKET recv_from_sender, send_to_rcvr;
+	SOCKADDR_IN address_of_rcvr, address_of_sndr, address_to_send_to_sndr = { 0 }, address_from_rcv = { 0 };
+	SOCKET sd;
 	int addrsize = sizeof(SOCKADDR_IN);
 
 /*==============================================================================================================*/		
-	
+	address_to_send_to_sndr = Init__Address(0, 0);
 	listen_to_sender = strtol(argv[PORT_CHNL], NULL, 10);
 	rcvr_listen_on = strtol(argv[PORT_TO_RCVR], NULL, 10);
 	seed = strtol(argv[SEED], NULL, 10);
@@ -53,70 +52,69 @@ int main(int argc, string* argv)
 
 	/*Channel Address init and bind*/	
 	address_of_sndr = Init__Address(LOCALHOST, listen_to_sender);
-	if ((recv_from_sender = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
+	address_of_rcvr = Init__Address(argv[IP_RCVR], rcvr_listen_on);
+	if ((sd = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
 	{
 		printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
 		exit(ERRORCODE);
 	}
-	if (bind(recv_from_sender, (SOCKADDR*)&address_of_sndr, addrsize))
+	if (bind(sd, (SOCKADDR*)&address_of_sndr, addrsize))
 	{
 		printf("Failed to Bind Socket with Error Code %d\n", WSAGetLastError());
 	}
 	/*==========================================================================================*/
 
-	/* Receiver Address init*/
-	address_of_rcvr = Init__Address(argv[IP_RCVR], rcvr_listen_on);
-	if ((send_to_rcvr = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
-	{
-		printf("Failed to Create Socket with Error Code %d\n", WSAGetLastError());
-		exit(ERRORCODE);
-	}
-	/*==========================================================================================*/	
-	maxfd = max(recv_from_sender, send_to_rcvr);
+	maxfd = sd;
 	int count_packets = 0;
 
 	while (1)
 	{
 		FD_ZERO(&read_fds);
-		FD_SET(recv_from_sender, &read_fds);
-		FD_SET(send_to_rcvr, &read_fds);
+		FD_SET(sd, &read_fds);
 		FD_ZERO(&write_fds);
-		FD_SET(send_to_rcvr, &write_fds);		
+		FD_SET(sd, &write_fds);		
 
 		select(maxfd + 1, &read_fds, &write_fds, NULL, &waittime);
 
-		if (FD_ISSET(send_to_rcvr, &read_fds))
+		if (FD_ISSET(sd, &read_fds))// && FD_ISSET(send_to_rcvr,&write_fds))
 		{
-			Handle_FinalMessage(send_to_rcvr, recv_from_sender,(SOCKADDR*)&address_of_rcvr,
-				(SOCKADDR*)&address_to_send_to_sndr, argv[IP_RCVR], blocki, tot_flips);
-			break;
-		}
-
-		if (FD_ISSET(recv_from_sender, &read_fds))// && FD_ISSET(send_to_rcvr,&write_fds))
-		{
-			if ((recv_bytes_from_sender = recvfrom(recv_from_sender, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_to_send_to_sndr, &addrsize)) == SOCKET_ERROR)
+			if ((recv_bytes_from_sender = recvfrom(sd, packet, sizeof(packet) - 1, 0, (SOCKADDR*)&address_from_rcv, &addrsize)) == SOCKET_ERROR)
 			{				
 				printf("RECV ERROR %d\n", WSAGetLastError());				
 			}
-			count_packets++;	
-			tot_flips += flip_packet(k, recv_bytes_from_sender, packet, q, b);
-			//printf("Flipped: %d\n", tot_flips);
-			blocki += recv_bytes_from_sender;
-			MC__Send(packet, recv_bytes_from_sender, send_to_rcvr, (SOCKADDR*)&address_of_rcvr);
-			Sleep(1);
+			if (address_to_send_to_sndr.sin_port == 0)
+			{
+				memcpy(&address_to_send_to_sndr, &address_from_rcv, sizeof(SOCKADDR));
+			}
+
+			if (!memcmp(&address_to_send_to_sndr, &address_from_rcv, sizeof(SOCKADDR)))
+			{
+				count_packets++;
+				tot_flips += flip_packet(k, recv_bytes_from_sender, packet, q, b);
+				blocki += recv_bytes_from_sender;
+				MC__Send(packet, recv_bytes_from_sender, sd, (SOCKADDR*)&address_of_rcvr);
+				
+			}
+
+			else
+			{
+				Handle_FinalMessage(sd, (SOCKADDR*)&address_of_rcvr,
+					(SOCKADDR*)&address_to_send_to_sndr, argv[IP_RCVR], blocki, tot_flips, packet, recv_bytes_from_sender);
+				break;
+			}
+
+			
 		}
 		int x = (blocki / 6116790.15) * 10;
 		if (x != temp)
 		{
 			printf("%.2f%%\n", blocki / 6116790.15);
-			//printf("flipped: %d ompared to %d packets\n", tot_flips, count_packets);
 		}
 
 		temp = x;
 	}
 	printf("Done!\n");
-	closesocket(recv_from_sender);
-	closesocket(send_to_rcvr);
+	closesocket(sd);
 	return SUCCESSCODE;
 }
 
@@ -138,14 +136,14 @@ int flip(int len_packet, int start, int end, double q, double b)
 	return 0;
 }
 
-int flip_packet(int k,int recv_bytes_from_sender, char *packet, double q , double b)
+int flip_packet(int k, int recv_bytes_from_sender, char* packet, double q, double b)
 {
 	int flips = 0;
 	int POW = (int)pow(2, (double)(K_INIT)-k);
 	int recv_bits = recv_bytes_from_sender * 8;	
 	for (int i = 0; i < POW; i++)
 	{
-		flips = flip(recv_bits, i * (int)pow(2, k), (i + 1) * (int)pow(2, k) - 1, q, b);
+		flips += flip(recv_bits, i * (int)pow(2, k), (i + 1) * (int)pow(2, k) - 1, q, b);
 	}
 	int* list_rnd = { 0 };
 	if (!intalloc(&list_rnd, flips, C))
@@ -175,22 +173,17 @@ int flip_packet(int k,int recv_bytes_from_sender, char *packet, double q , doubl
 	return flips;
 }
 
-void Handle_FinalMessage(SOCKET recv_from_rcvr, SOCKET send_to_sndr, SOCKADDR* address_of_rcvr,
-	SOCKADDR* address_to_send_to_sndr , string ip_rcvr, int blocki, int tot_flips)
+void Handle_FinalMessage(SOCKET sd, SOCKADDR* address_of_rcvr,
+	SOCKADDR* address_to_send_to_sndr , string ip_rcvr, int blocki, int tot_flips, string packet, int recv_bytes_from_sender)
 {
-	char ip[MAX_IP_LEN], packet[150] = { 0 };
-	int recv_bytes_from_sender = 0, addrsize = sizeof(SOCKADDR);
-	/*  Recv from rcvr the Final message  */
-	if ((recv_bytes_from_sender = recvfrom(recv_from_rcvr, packet, sizeof(packet) - 1, 0, address_of_rcvr, &addrsize)) == SOCKET_ERROR)
-	{
-		printf("Failed to Recv Data Through Socket with Error Code %d\n", WSAGetLastError());
-	}
+	char ip[MAX_IP_LEN];
+	int addrsize = sizeof(SOCKADDR);
 	/*	Print Final message  */
 	inet_ntop(AF_INET, &((SOCKADDR_IN*)address_to_send_to_sndr)->sin_addr, ip, sizeof(ip));
 	printf("sender: %s\nreceiver: %s\n%d bytes, flipped %d bits\n", ip, ip_rcvr, blocki, tot_flips);
-
+	
 	/*  Send Final message to sender*/
-	if (SOCKET_ERROR == sendto(send_to_sndr, packet, recv_bytes_from_sender, 0, address_to_send_to_sndr, addrsize))
+	if (SOCKET_ERROR == sendto(sd, packet, recv_bytes_from_sender, 0, address_to_send_to_sndr, addrsize))
 	{
 		printf("Failed to Send Data Through Socket with Error Code %d\n", WSAGetLastError());
 	}		
@@ -213,13 +206,3 @@ void Calculate_RandomVariables(double prob, int* p_k, double* p_b, double* p_q, 
 	} while (q == 1.0);
 	*p_k = k, * p_b = b, * p_a = a, * p_q = q;
 }
-
-/*Print Debug*/
-//blocki += recv_bytes_from_sender;
-//int x = (blocki / 6116790.15) * 10;
-//if (x != temp)
-//{
-//	printf("%.2f%%\n", blocki / 6116790.15);
-//	printf("flipped: %d ompared to %d packets\n", tot_flips, count_packets);
-//}
-//temp = x;

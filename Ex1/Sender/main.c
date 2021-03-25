@@ -56,6 +56,7 @@ int main(int argc, string* argv)
 		FD_SET(sd_write, &fds_read);
 		FD_ZERO(&fds_write);
 		FD_SET(sd_write, &fds_write);
+
 		select(maxfd + 1, &fds_read, &fds_write, NULL, &waittime);
 
 		if (FD_ISSET(sd_write, &fds_read))
@@ -201,10 +202,13 @@ void Send_Packet(SOCKET s, string packet, int *currentbyte, SOCKADDR* address, F
 {
 	if ((feof(message) && *currentbyte != 0) || *currentbyte == PACKETSIZE - 1)
 	{
+		for (int i = 0; i < 350000; i++)
+		{
+			//wait;
+		}
 		MC__Send(packet, *currentbyte, s, address);
 		*currentbyte = 0;
 		Reset_String(packet);
-		Sleep(3);
 	}
 }
 
@@ -216,6 +220,7 @@ void Final_Recv(SOCKET s, SOCKADDR* address)
 	if (SOCKET_ERROR == (recvfrom(s, packet, sizeof(packet) - 1, 0, address, &addrsize)))
 	{
 		printf("RECV ERROR %d\n", WSAGetLastError());
+		return;
 	}
 	temp = strtok_s(packet, ",\r", &NotUsed);
 	received = strtol(temp, NULL, 10);

@@ -69,10 +69,10 @@ int main(int argc, string* argv)
 		if (FD_ISSET(sd_read, &fds_read))
 		{
 			Receive_Packet(sd_read, (SOCKADDR*)&address_sndr, message, &sum);
-			int x = (sum.written / 6116790.15) * 10;
+			int x = (sum.written / 4485646.11) * 10;
 			if (x != temp)
 			{
-				printf("%.2f%%\n", sum.written / 6116790.15);
+				printf("%.2f%%\n", sum.written / 4485646.11);
 			}
 			temp = x;
 		}
@@ -170,7 +170,7 @@ int unHamming(string str)
 			j++;
 		}
 	}
-	return (check != 0);
+	return (check != 0 && !ispowof2(check));
   }
 
 int Concat_unHamming(string buffer)
@@ -251,11 +251,7 @@ void Final_message(Summary sum, SOCKET sd_write, SOCKADDR* address)
 	int addrsize = sizeof(SOCKADDR);
 	sprintf_s(packet, sizeof(packet) - 1, "%d, %d, %d\r\n\r\n", sum.received, sum.written, sum.errors);
 	printf("received: %d\nwrote: %d\ndetected & corrected %d errors\n", sum.received, sum.written, sum.errors);
-	/*if (address_sndr.sin_port == 0)
-		break;*/
 	char ip[MAX_IP_LEN];
-	//inet_ntop(AF_INET, &(address_sndr.sin_addr), ip, sizeof(ip));
-	//printf("port is: %d, ip is: %s\n", address_sndr.sin_port, ip);
 	if (SOCKET_ERROR == sendto(sd_write, packet, strlen(packet), 0, address, addrsize))
 		printf("Failed to Send Data Through Socket with Error Code %d\n", WSAGetLastError());
 }

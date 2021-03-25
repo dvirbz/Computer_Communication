@@ -27,9 +27,6 @@
     <ClCompile Include="..\Shared Resources\WSA.c">
       <Filter>Shared Resources</Filter>
     </ClCompile>
-    <ClCompile Include="..\Shared Resources\Queue.c">
-      <Filter>Shared Resources</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Shared Resources\Defines.h">
@@ -42,9 +39,6 @@
       <Filter>Shared Resources</Filter>
     </ClInclude>
     <ClInclude Include="..\Shared Resources\WSA.h">
-      <Filter>Shared Resources</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Shared Resources\Queue.h">
       <Filter>Shared Resources</Filter>
     </ClInclude>
   </ItemGroup>
