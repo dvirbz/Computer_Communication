@@ -51,9 +51,10 @@ int main()
 		pop_next_packet();
 		return 0;
 	}
+	current_time = handle_packet(current_line);
 	next_arrival_time = parse_arrival_time(nextline);
-	update_virtual_time();	
-	handle_packet(current_line);	
+	current_line = nextline;
+		
 	//current_time = next_arrival_time;
 
 	/*    Handle next Packets    */
@@ -187,12 +188,14 @@ void update_min_last() {
 	pops the next packet out of the queue
 */
 unsigned int pop_next_packet() {	
-	string connection = get<0>(min_last);
+	string& connection = get<0>(min_last);
 	packet_queue.queue_pop(connection);
 	get<1>(min_last) = numeric_limits<float>::max();
 	update_min_last();
-	if (packet_queue.empty()) { return current_time; }
-	connection = get<0>(min_last);	
+	if (packet_queue.empty()) {
+		connection = "";
+		return current_time;
+	}
 	dict_val2& curr_val = packet_queue[connection].front();
 	int packet_size = curr_val[SIZE];
 	int finish_time = current_time + packet_size;
