@@ -72,7 +72,7 @@ namespace dictionary
         bool contains(string key);
         void queue_push(string key, dict_val2 size);
         dict_val2 queue_pop(string key);
-        float sum_weighted_active_conns(connection_dict cd);
+        float sum_weighted_active_conns(connection_dict cd, float round);
         unordered_map<string, queue<dict_val2>>::iterator begin();
         unordered_map<string, queue<dict_val2>>::iterator end();
         bool empty();

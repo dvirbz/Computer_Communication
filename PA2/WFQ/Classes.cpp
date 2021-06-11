@@ -162,18 +162,33 @@ dict_val2 queue_dict::queue_pop(string key) {
     }
     return retval;
 }
+
+bool is_active_weight(queue<dict_val2> dup, float round)
+{
+    queue<dict_val2> q = dup;
+    while (!q.empty())
+    {
+        if (q.front()[LAST] > round)
+            return true;
+        q.pop();
+    }
+    return false;
+}
+
 /*
     Input: A connection links dictionary
     Output: Sum of all active links weights
 */
-float queue_dict::sum_weighted_active_conns(connection_dict cd) {
+float queue_dict::sum_weighted_active_conns(connection_dict cd, float round) {
     float retval = 0;
     unordered_map<string, queue<dict_val2>>::iterator it;
-    for (it = this->conn_queue.begin(); it != this->conn_queue.end(); it++) {
-        retval += cd[it->first][WEIGHT];
+    for (it = this->conn_queue.begin(); it != this->conn_queue.end(); it++) {        
+        if (is_active_weight(it->second, round))
+            retval += cd[it->first][WEIGHT];
     }
     return retval;
 }
+
 
 unordered_map<string, queue<dict_val2>>::iterator queue_dict::begin() {
     return this->conn_queue.begin();
