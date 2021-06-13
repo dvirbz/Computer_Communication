@@ -12,15 +12,18 @@ using enum string_index;
 #define OUTPUT_PATH "./output.txt"
 
 connection_dict conn_dict = connection_dict();
-queue_dict packet_queue = queue_dict();
-tuple<float, float> roundt(0.0, 0.0);
-tuple<string, float> min_last("", numeric_limits<float>::max());
-unsigned int current_time = 0;
+queue_dict WFQ = queue_dict();
+queue_dict GPS = queue_dict();
+float prev_time = 0.0F;
+float round_time = 0.0F;
+string min_last_conn;
+float min_last = numeric_limits<float>::max();
+float current_time = 0;
 ofstream output;
 
 
 ostream& operator<<(ostream& stream, queue_dict qd) {
-	unordered_map<string, queue<dict_val2>>::iterator it;
+	unordered_map<string, queue<packet>>::iterator it;
 	stream << "{" << endl;
 	for (it = qd.begin(); it != qd.end(); it++) {
 		stream << "\t{" << it->first << ", " << it->second << "}" << conn_dict[it->first] << "," << endl;
@@ -31,62 +34,120 @@ ostream& operator<<(ostream& stream, queue_dict qd) {
 
 
 //void calculate_all_lasts();
-void update_min_last();
-unsigned int pop_next_packet();
-unsigned int parse_arrival_time(string packet_line);
-unsigned int handle_packet(string packet);
-float calc_last(float t, int packet_size, float weight, float ftpp = 0.0F);
+void update_min_last(queue_dict pq);
+int receive(string pack);
+void recalculate_round(float next_round);
+float pop_next_packet();
+float parse_arrival_time(string packet_line);
+float handle_packet(string packet);
+float calc_last(int packet_size, float weight, float ftpp = 0.0F);
 void update_virtual_time();
-tuple<int, string, int, float, bool> break_line(string connection_line);
+tuple<float, string, int, float, bool> break_line(string connection_line);
 
 int main()
 {	
-	unsigned int next_arrival_time = 0, current_finish_time = current_time, current_arrival_time = 0;
-	string nextline, current_line = "";
+	float next_arrival_time, current_finish_time = 0, next_min_last_time;
+	unsigned int s;
+	string nextline;
 	output.open(OUTPUT_PATH);
-	/*     Handle first packet    */   
-	if (!getline(cin, current_line)) { return 0; }
-	if (!getline(cin, nextline)) {
-		current_time = handle_packet(current_line);
-		pop_next_packet();
-		return 0;
-	}
-	current_time = handle_packet(current_line);
+	/*     Handle first packet     */  
+	if (!getline(cin, nextline)) { return 0; }
 	next_arrival_time = parse_arrival_time(nextline);
-	current_line = nextline;
-		
-	//current_time = next_arrival_time;
 
 	/*    Handle next Packets    */
-	while (1) {		
-		//calculate_all_lasts();
-		//cout << "1: next_finish_time: " << current_finish_time << " next_arrival_time: " << next_arrival_time << " current_arrival_time: "
-		//	<< current_arrival_time << " current time: " << current_time << endl;
-		
-		if (!packet_queue.empty() &&  current_time >= current_finish_time) {
-			current_finish_time = pop_next_packet();			
+	while (1) {
+		update_min_last(GPS);
+		next_min_last_time = prev_time + (min_last - round_time) * GPS.sum_weighted_active_conns(conn_dict);
+		s = (!GPS.empty() << 1) + !WFQ.empty();
+		if (WFQ.empty()) {
+			current_finish_time = max(current_finish_time, next_arrival_time);
 		}
-		if (packet_queue.empty() || current_finish_time >= next_arrival_time) {
+		switch(s) {
+		case 0:
 			current_time = next_arrival_time;
-			current_line = nextline;
+			break;
+		case 1:
+			current_time = min(next_arrival_time, current_finish_time);
+			break;
+		case 2:
+			current_time = min(next_arrival_time, next_min_last_time);
+			break;
+		case 3:
+			current_time = min({ next_arrival_time, current_finish_time, next_min_last_time });
+			break;
+		}
+		output << "next_finish_time: " << (int)current_finish_time << " next_arrival_time: " << (int)next_arrival_time << " next_min_last: "
+			<< setprecision(8) << next_min_last_time << " current time: " << current_time << " prev time: " << prev_time << " round: " << round_time << endl;
+		output << "GPS:" << endl << GPS << endl;
+		output << "WFQ:" << endl << WFQ << endl << endl << endl;
+
+
+
+
+		if (!GPS.empty() && current_time == next_min_last_time) {
+			update_virtual_time();
+			GPS.queue_pop(min_last_conn, conn_dict);
+			output << "min_last" << endl;
+		}
+		if (current_time == next_arrival_time) {
+			handle_packet(nextline);
 			if (!getline(cin, nextline)) { break; }
-			next_arrival_time = parse_arrival_time(nextline);		
-			handle_packet(current_line);
+			next_arrival_time = parse_arrival_time(nextline);
+			output << "recv" << endl;
+			continue;
+		}
+		if (!WFQ.empty() && current_time == current_finish_time) {
+			current_finish_time = pop_next_packet();
+			output << "send" << endl;
+		}
+
+
+
+		/*
+		if (WFQ.empty()) {
+			if (GPS.empty()) {
+				// receive(packet)
+			}
+			else {
+				if (next_min_last_time <= next_arrival_time) {
+					// POP GPS
+				}
+				else {
+					// receive(packet)
+				}
+			}
 		}
 		else {
-			current_time = current_finish_time;			
+			if (GPS.empty()) {
+				if (current_finish_time <= next_arrival_time) {
+					// pop_next_packet
+				}
+				else {
+					// receive(packet)
+				}
+			}
+			else {
+				if (current_finish_time <= min(next_arrival_time, next_min_last_time)) {
+					// pop_next_packet
+				}
+				else if (next_min_last_time < min(next_arrival_time, current_finish_time)) {
+					// POP GPS
+				}
+				else {
+					// receive(packet)
+				}
+			}
 		}
-		//cout << packet_queue << endl;
-		//current_time = next_arrival_time;
-		/*cout << "2: next_finish_time: " << current_finish_time << " next_arrival_time: " << next_arrival_time << " current_arrival_time: "
-						 << current_arrival_time << " current time: " << current_time << endl;*/
+		*/
 
 	}	
-	//cout << "1: next_finish_time: " << current_finish_time << " next_arrival_time: " << next_arrival_time << " current_arrival_time: "
-	//	<< current_arrival_time << " current time: " << current_time << endl;
-	handle_packet(current_line);
-	while (!packet_queue.empty()) {
+	//if (!WFQ.empty()) {
+	//	handle_packet(nextline);
+	//}
+
+	while (!WFQ.empty()) {
 		current_time = max(current_finish_time, next_arrival_time);
+
 		//cout << "sending packet" << endl;
 		current_finish_time = pop_next_packet();
 	}
@@ -96,11 +157,11 @@ int main()
 
 // Input a packet line
 // Output a Connection quadruple of ToA, (Sadd Sport Dadd Dport) as string, size and weight
-tuple<int, string, int, float, bool> break_line(string connection_line) {
+tuple<float, string, int, float, bool> break_line(string connection_line) {
 	stringstream s(connection_line);
 	string current_word, output;
 	s >> current_word;
-	int arriving_time = stoi(current_word);
+	float arriving_time = stof(current_word);
 	s >> output;
 	for (int i = 0; i < 3; i++) {
 		s >> current_word;
@@ -121,65 +182,68 @@ tuple<int, string, int, float, bool> break_line(string connection_line) {
 */
 
 void update_virtual_time() {
-	float sum_of_active_weights = packet_queue.sum_weighted_active_conns(conn_dict, get<1>(roundt));
+	float sum_of_active_weights = GPS.sum_weighted_active_conns(conn_dict);
 	if (sum_of_active_weights == 0.0F) {
-		get<0>(roundt) = (float)current_time;
-		get<1>(roundt) = (float)current_time;
+		prev_time = (float)current_time;
+		//round_time = 0.0F;
 		return;
 	}
-	float x = current_time - get<0>(roundt);
-	get<0>(roundt) = (float)current_time;
-	get<1>(roundt) += x / sum_of_active_weights;
+	float dt = current_time - prev_time;
+
+	prev_time = (float)current_time;
+	round_time += dt / sum_of_active_weights;
 }
+
+
 /*
 	Input: t - time, finish time of previous packet ftpp, packet_size, packet weight and the round dictionary
 	Output: return the last(packet) - its GPS finish time
 */
-float calc_last(float t, int packet_size, float weight, float ftpp) {
-	return max(get<1>(roundt), ftpp) + packet_size / weight;
+float calc_last(int packet_size, float weight, float ftpp) {
+	return max(round_time, ftpp) + packet_size / weight;
 }
 /*
 	Input: Packet string - packet
 	Output: returns arrival time
 	Function Handles inserts to the queue new packets
 */
-unsigned int handle_packet(string packet) {
+float handle_packet(string p) {
 	update_virtual_time();
-	tuple<int, string, int, float, bool> packet_param = break_line(packet);
-	string connection = get<1>(packet_param);
-	int packet_size = get<2>(packet_param);
-	conn_dict.insert(connection, dict_val(get<0>(packet_param), get<3>(packet_param)), get<4>(packet_param));
-	float ftpp = packet_queue.contains(connection) ? packet_queue[connection].back()[LAST] : 0;
-	float last = calc_last((float)current_time, packet_size, conn_dict[connection][WEIGHT], ftpp);
-	packet_queue.queue_push(get<1>(packet_param), dict_val2(packet, packet_size, last));	
+	tuple<float, string, int, float, bool> packet_param = break_line(p);
+	string connection = get<1>(packet_param); int packet_size = get<2>(packet_param); float weight = get<3>(packet_param); bool is_new_weight = get<4>(packet_param);
+	float temp_weight = (conn_dict.contains(connection)) ? conn_dict[connection][WEIGHT] : weight;
+	temp_weight = (WFQ.contains(connection)) ? WFQ[connection].back()[WEIGHT] : temp_weight;
+	float packet_weight = get<4>(packet_param) ? weight : temp_weight;
+	conn_dict.insert(connection, dict_val((int)get<0>(packet_param), weight), !WFQ.contains(connection) && is_new_weight);
+	float ftpp = WFQ.contains(connection) ? WFQ[connection].back()[LAST] : 0;
+	float last = calc_last(packet_size, conn_dict[connection][WEIGHT], ftpp);
+	WFQ.queue_push(get<1>(packet_param), packet(p, packet_size, last, packet_weight));
+	GPS.queue_push(connection, packet(p, packet_size, last, packet_weight));
 	return get<0>(packet_param);
 }
 
-unsigned int parse_arrival_time(string packet_line) {
+float parse_arrival_time(string packet_line) {
 	stringstream s(packet_line);
 	string retval;
 	s >> retval;
-	return stoi(retval);
+	return stof(retval);
 }
 
-void update_min_last() {
-	unordered_map<string, queue<dict_val2>>::iterator it;
-	string connection = get<0>(min_last);
-	float current_min = get<1>(min_last);
-	string curr_conn;	
-	for (it = packet_queue.begin(); it != packet_queue.end(); it++) {
-		curr_conn = it->first; dict_val2& curr_val = it->second.front();				
-		if (current_min == curr_val[LAST]) {
-			if (conn_dict[curr_conn][TOA] > conn_dict[connection][TOA]) { continue; }
-			connection = curr_conn;
-			current_min = curr_val[LAST];
+void update_min_last(queue_dict pq) {
+	min_last = numeric_limits<float>::max();
+	unordered_map<string, queue<packet>>::iterator it;
+	string curr_conn;
+	for (it = pq.begin(); it != pq.end(); it++) {
+		curr_conn = it->first; packet& curr_val = it->second.front();				
+		if (min_last == curr_val[LAST]) {
+			if (conn_dict[curr_conn][TOA] > conn_dict[min_last_conn][TOA]) { continue; }
+			min_last_conn = curr_conn;
+			min_last = curr_val[LAST];
 		}
-		else if (current_min < curr_val[LAST]) { continue; }
-		connection = curr_conn;
-		current_min = curr_val[LAST];
+		else if (min_last < curr_val[LAST]) { continue; }
+		min_last_conn = curr_conn;
+		min_last = curr_val[LAST];
 	}
-	get<0>(min_last) = connection;
-	get<1>(min_last) = current_min;
 }
 
 /*
@@ -187,21 +251,16 @@ void update_min_last() {
 	Output: Finish time
 	pops the next packet out of the queue
 */
-unsigned int pop_next_packet() {	
-	string& connection = get<0>(min_last);
-	packet_queue.queue_pop(connection);
-	get<1>(min_last) = numeric_limits<float>::max();
-	update_min_last();
-	if (packet_queue.empty()) {
-		connection = "";
-		return current_time;
-	}
-	dict_val2& curr_val = packet_queue[connection].front();
+float pop_next_packet() {	
+	update_min_last(WFQ);
+	packet curr_val = WFQ[min_last_conn].front();
 	int packet_size = curr_val[SIZE];
-	int finish_time = current_time + packet_size;
-	output << current_time << ": " << curr_val[PACKET_LINE] << endl;
-	//output << get<0>(min_last) << ", " << setprecision(6) << get<1>(min_last) << endl;
-	//output << packet_queue << endl;
+	float finish_time = current_time + packet_size;
+	//output << WFQ << endl;
+	WFQ.queue_pop(min_last_conn);
+	output << ((int)current_time) << ": " << curr_val[PACKET_LINE] << endl;
+	output << min_last_conn << ", " << setprecision(6) << min_last << endl;
+	//output << WFQ << endl;
 	return finish_time;
 }
 

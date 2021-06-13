@@ -44,21 +44,21 @@ float& dict_val::operator[](float_index i) {
     }
 }
 
-dict_val2::dict_val2() {
-    this->val = make_tuple("", 0, 0.0);
+packet::packet() {
+    this->val = make_tuple("", 0, 0.0F, 0.0F);
 }
 
-dict_val2::dict_val2(string packet_line, unsigned int size, float last) {
-    this->val = make_tuple(packet_line, size, last);
+packet::packet(string packet_line, unsigned int size, float last, float weight) {
+    this->val = make_tuple(packet_line, size, last, weight);
 }
 
-unsigned int& dict_val2::operator[](int_index i) {
+unsigned int& packet::operator[](int_index i) {
     switch (i) {
     case SIZE:
         return get<1>(val);
         break;
     default:
-        cout << "dict_val2 has no field " << i << endl;
+        cout << "packet has no field " << i << endl;
         assert(false);
         static unsigned int defval = numeric_limits<unsigned int>::max();
         return defval;
@@ -66,13 +66,16 @@ unsigned int& dict_val2::operator[](int_index i) {
     }
 }
 
-float& dict_val2::operator[](float_index i) {
+float& packet::operator[](float_index i) {
     switch (i) {
     case LAST:
         return get<2>(this->val);
         break;
+    case WEIGHT:
+        return get<3>(this->val);
+        break;
     default:
-        cout << "dict_val2 has no field " << i << endl;
+        cout << "packet has no field " << i << endl;
         assert(false);
         static float defval = numeric_limits<float>::max();
         return defval;
@@ -80,13 +83,13 @@ float& dict_val2::operator[](float_index i) {
     }
 }
 
-string& dict_val2::operator[](string_index i) {
+string& packet::operator[](string_index i) {
     switch (i) {
     case PACKET_LINE:
         return get<0>(val);
         break;
     default:
-        cout << "dict_val2 has no field " << i << endl;
+        cout << "packet has no field " << i << endl;
         assert(false);
         static string defval = "";
         return defval;
@@ -134,8 +137,8 @@ queue_dict::queue_dict() {
     this->conn_queue = {};
 }
 
-queue<dict_val2>& queue_dict::operator[](const string& key) {
-    static queue<dict_val2> defval = queue<dict_val2>();
+queue<packet>& queue_dict::operator[](const string& key) {
+    static queue<packet> defval = queue<packet>();
     if (!this->conn_queue.count(key)) { return defval; }
 
     return this->conn_queue[key];
@@ -145,17 +148,31 @@ bool queue_dict::contains(string key) {
     return (bool)this->conn_queue.count(key);
 }
 
-void queue_dict::queue_push(string key, dict_val2 val) {
+void queue_dict::queue_push(string key, packet val) {
     if (!this->contains(key)) {
-        this->conn_queue.insert({ key, queue<dict_val2>() });
+        this->conn_queue.insert({ key, queue<packet>() });
     }
     this->conn_queue[key].push(val);
 }
 
-dict_val2 queue_dict::queue_pop(string key) {
-    static dict_val2 defval("", 0, 0.0);
+packet queue_dict::queue_pop(string key, connection_dict cd) {
+    static packet defval("", 0, 0.0F, 0.0F);
     if (!this->contains(key)) { return defval; }
-    dict_val2 retval = this->conn_queue[key].front();
+    packet retval = this->conn_queue[key].front();
+    this->conn_queue[key].pop();
+    if (this->conn_queue[key].empty()) {
+        this->conn_queue.erase(key);
+    }
+    else {
+        cd[key][WEIGHT] = conn_queue[key].front()[WEIGHT];
+    }
+    return retval;
+}
+
+packet queue_dict::queue_pop(string key) {
+    static packet defval("", 0, 0.0F, 0.0F);
+    if (!this->contains(key)) { return defval; }
+    packet retval = this->conn_queue[key].front();
     this->conn_queue[key].pop();
     if (this->conn_queue[key].empty()) {
         this->conn_queue.erase(key);
@@ -163,9 +180,9 @@ dict_val2 queue_dict::queue_pop(string key) {
     return retval;
 }
 
-bool is_active_weight(queue<dict_val2> dup, float round)
+bool is_active_weight(queue<packet> dup, float round)
 {
-    queue<dict_val2> q = dup;
+    queue<packet> q = dup;
     while (!q.empty())
     {
         if (q.front()[LAST] > round)
@@ -179,21 +196,20 @@ bool is_active_weight(queue<dict_val2> dup, float round)
     Input: A connection links dictionary
     Output: Sum of all active links weights
 */
-float queue_dict::sum_weighted_active_conns(connection_dict cd, float round) {
+float queue_dict::sum_weighted_active_conns(connection_dict cd) {
     float retval = 0;
-    unordered_map<string, queue<dict_val2>>::iterator it;
+    unordered_map<string, queue<packet>>::iterator it;
     for (it = this->conn_queue.begin(); it != this->conn_queue.end(); it++) {        
-        if (is_active_weight(it->second, round))
-            retval += cd[it->first][WEIGHT];
+        retval += cd[it->first][WEIGHT];
     }
     return retval;
 }
 
 
-unordered_map<string, queue<dict_val2>>::iterator queue_dict::begin() {
+unordered_map<string, queue<packet>>::iterator queue_dict::begin() {
     return this->conn_queue.begin();
 }
-unordered_map<string, queue<dict_val2>>::iterator queue_dict::end() {
+unordered_map<string, queue<packet>>::iterator queue_dict::end() {
     return this->conn_queue.end();
 }
 
@@ -210,13 +226,13 @@ ostream& operator<<(ostream& stream, dict_val& dv) {
     return stream;
 }
 
-ostream& operator<<(ostream& stream, dict_val2& dv) {
-    stream << "{" << dv[PACKET_LINE] << ", " << dv[SIZE] << ", " << setprecision(10) << dv[LAST] << "}";
+ostream& operator<<(ostream& stream, packet& dv) {
+    stream << "{" << dv[PACKET_LINE] << ", " << dv[SIZE] << ", " << setprecision(10) << dv[LAST] << ", " << setprecision(10) << dv[WEIGHT] << "}";
     return stream;
 }
 
-ostream& operator<<(ostream& stream, queue<dict_val2> q) {
-    queue<dict_val2> dup = q;
+ostream& operator<<(ostream& stream, queue<packet> q) {
+    queue<packet> dup = q;
     stream << "(";
     while (!dup.empty()) {
         stream << dup.front();

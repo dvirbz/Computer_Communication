@@ -42,11 +42,11 @@ namespace dictionary
         float& operator[](dictionary::float_index i);
     };
 
-    class dict_val2 {
+    class packet {
     public:
-        tuple<string, unsigned int, float> val;
-        dict_val2();
-        dict_val2(string packet_line, unsigned int size, float last);
+        tuple<string, unsigned int, float, float> val;
+        packet();
+        packet(string packet_line, unsigned int size, float last, float weight);
         unsigned int& operator[](dictionary::int_index i);
         float& operator[](dictionary::float_index i);
         string& operator[](dictionary::string_index i);
@@ -64,24 +64,26 @@ namespace dictionary
         bool contains(string key);
         bool empty();
     };
+
     class queue_dict {
     public:
-        unordered_map<string, queue<dict_val2>> conn_queue;
+        unordered_map<string, queue<packet>> conn_queue;
         queue_dict();
-        queue<dict_val2>& operator[](const string& key);
+        queue<packet>& operator[](const string& key);
         bool contains(string key);
-        void queue_push(string key, dict_val2 size);
-        dict_val2 queue_pop(string key);
-        float sum_weighted_active_conns(connection_dict cd, float round);
-        unordered_map<string, queue<dict_val2>>::iterator begin();
-        unordered_map<string, queue<dict_val2>>::iterator end();
+        void queue_push(string key, packet size);
+        packet queue_pop(string key, connection_dict cd);
+        packet queue_pop(string key);
+        float sum_weighted_active_conns(connection_dict cd);
+        unordered_map<string, queue<packet>>::iterator begin();
+        unordered_map<string, queue<packet>>::iterator end();
         bool empty();
     };
 }
 
 ostream& operator<<(ostream& stream, dictionary::dict_val& dv);
-ostream& operator<<(ostream& stream, dictionary::dict_val2& dv);
-ostream& operator<<(ostream& stream, queue<dictionary::dict_val2> q);
+ostream& operator<<(ostream& stream, dictionary::packet& dv);
+ostream& operator<<(ostream& stream, queue<dictionary::packet> q);
 ostream& operator<<(ostream& stream, dictionary::connection_dict& cd);
 //ostream& operator<<(ostream& stream, dictionary::queue_dict qd);
 ostream& operator<<(ostream& stream, dictionary::int_index qd);
