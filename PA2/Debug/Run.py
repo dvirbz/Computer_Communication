@@ -5,7 +5,7 @@ def main(argv):
         print("USAGE: %s <correct output number>" % argv[0])
         return 1
     os.system(f"WFQ.exe < Inputs/input{argv[1]}.txt")
-    path1 = "./Outputs/output" + argv[1] + ".txt"
+    path1 = f"./Outputs/output{argv[1]}.txt"
     path2 = "./output.txt"
     count = 0
     with open(path1) as f:

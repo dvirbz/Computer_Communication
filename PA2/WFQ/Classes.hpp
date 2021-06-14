@@ -72,7 +72,7 @@ namespace dictionary
         queue<packet>& operator[](const string& key);
         bool contains(string key);
         void queue_push(string key, packet size);
-        packet queue_pop(string key, connection_dict cd);
+        packet queue_pop(string key, connection_dict& cd);
         packet queue_pop(string key);
         float sum_weighted_active_conns(connection_dict cd);
         unordered_map<string, queue<packet>>::iterator begin();

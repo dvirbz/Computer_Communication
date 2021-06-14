@@ -155,7 +155,7 @@ void queue_dict::queue_push(string key, packet val) {
     this->conn_queue[key].push(val);
 }
 
-packet queue_dict::queue_pop(string key, connection_dict cd) {
+packet queue_dict::queue_pop(string key, connection_dict& cd) {
     static packet defval("", 0, 0.0F, 0.0F);
     if (!this->contains(key)) { return defval; }
     packet retval = this->conn_queue[key].front();
