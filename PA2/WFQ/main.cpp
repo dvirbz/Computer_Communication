@@ -19,6 +19,7 @@ float round_time = 0.0F;
 string min_last_conn;
 float min_last = numeric_limits<float>::max();
 float current_time = 0;
+float sum_of_active_weights = 0.0F;
 ofstream output;
 
 
@@ -57,7 +58,10 @@ int main()
 	/*    Handle next Packets    */
 	while (1) {
 		update_min_last(GPS);
-		next_min_last_time = prev_time + (min_last - round_time) * GPS.sum_weighted_active_conns(conn_dict);
+		if( prev_time != current_time) {
+			sum_of_active_weights = GPS.sum_weighted_active_conns(conn_dict);
+		}
+		next_min_last_time = prev_time + (min_last - round_time) * sum_of_active_weights;
 		s = (!GPS.empty() << 1) + !WFQ.empty();
 		switch(s) {
 		case 0:
@@ -126,8 +130,7 @@ tuple<float, string, int, float, bool> break_line(string connection_line) {
 	Output: return the round of which the next event will happen
 */
 
-void update_virtual_time() {
-	float sum_of_active_weights = GPS.sum_weighted_active_conns(conn_dict);
+void update_virtual_time() {	
 	if (sum_of_active_weights == 0.0F) {
 		prev_time = (float)current_time;
 		//round_time = 0.0F;
